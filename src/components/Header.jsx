@@ -38,7 +38,10 @@ const Header = ({ onMenuClick }) => {
               <span className="text-xs text-gray-500">Sesión activa</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
+              <div 
+                className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg"
+                style={{ background: 'var(--gradient-primary)' }}
+              >
                 <User size={20} className="text-white" />
               </div>
               <button

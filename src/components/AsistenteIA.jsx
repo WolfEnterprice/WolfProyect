@@ -1,0 +1,277 @@
+import { useState, useEffect, useRef } from 'react'
+import { X, Send, Bot, DollarSign, Loader2, Sparkles } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { ingresosService } from '../services/ingresosService'
+import { gastosService } from '../services/gastosService'
+import { presupuestosService } from '../services/presupuestosService'
+import { ahorroService } from '../services/ahorroService'
+import { getUsuarioContexto, enviarMensajeIA, generarTipsAutomaticos } from '../services/geminiService'
+
+const AsistenteIA = ({ isOpen, onClose }) => {
+  const [mensajes, setMensajes] = useState([])
+  const [mensajeActual, setMensajeActual] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [cargandoContexto, setCargandoContexto] = useState(true)
+  const [contexto, setContexto] = useState(null)
+  const mensajesEndRef = useRef(null)
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (isOpen && !contexto) {
+      cargarContexto()
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [mensajes])
+
+  const cargarContexto = async () => {
+    try {
+      setCargandoContexto(true)
+      const [ingresos, gastos, presupuestosData, ahorro] = await Promise.all([
+        ingresosService.getAll(),
+        gastosService.getAll(),
+        presupuestosService.getAll(),
+        ahorroService.get()
+      ])
+
+      // Calcular gastado para cada presupuesto
+      const presupuestos = await Promise.all(
+        presupuestosData.map(async (presupuesto) => {
+          const gastado = await presupuestosService.getGastadoPorCategoria(presupuesto.categoria)
+          return { ...presupuesto, gastado }
+        })
+      )
+
+      const contextoUsuario = await getUsuarioContexto(ingresos, gastos, presupuestos, ahorro)
+      setContexto(contextoUsuario)
+
+      // Agregar mensaje de bienvenida con tips automáticos
+      agregarMensaje({
+        tipo: 'bot',
+        texto: '¡Hola! 👋 Soy FinBot, tu asistente financiero personal. Analizando tu situación financiera...',
+        timestamp: new Date()
+      })
+
+      // Generar tips automáticos
+      const tips = await generarTipsAutomaticos(contextoUsuario)
+      if (tips.success) {
+        agregarMensaje({
+          tipo: 'bot',
+          texto: tips.mensaje,
+          timestamp: new Date()
+        })
+      } else {
+        // Si falla, mostrar el mensaje de error
+        agregarMensaje({
+          tipo: 'bot',
+          texto: tips.mensaje || 'No pude generar tips automáticos. Pero puedes hacerme preguntas sobre tus finanzas.',
+          timestamp: new Date()
+        })
+      }
+    } catch (error) {
+      console.error('Error cargando contexto:', error)
+      let mensajeError = 'Lo siento, hubo un error al cargar tu información financiera. Por favor intenta de nuevo.'
+      
+      if (error.message && error.message.includes('API Key')) {
+        mensajeError = '⚠️ API Key de Gemini no configurada.\n\nPara configurarla:\n1. Crea un archivo .env en la raíz del proyecto\n2. Agrega: VITE_GEMINI_API_KEY=tu_api_key_aqui\n3. Obtén tu API key en: https://aistudio.google.com/apikey\n4. Reinicia el servidor de desarrollo\n\nMientras tanto, puedes usar la aplicación normalmente, pero el asistente IA no estará disponible.'
+      }
+      
+      agregarMensaje({
+        tipo: 'bot',
+        texto: mensajeError,
+        timestamp: new Date()
+      })
+    } finally {
+      setCargandoContexto(false)
+    }
+  }
+
+  const agregarMensaje = (mensaje) => {
+    setMensajes(prev => [...prev, mensaje])
+  }
+
+  const scrollToBottom = () => {
+    mensajesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const enviarMensaje = async () => {
+    if (!mensajeActual.trim() || loading || !contexto) return
+
+    const mensajeUsuario = mensajeActual.trim()
+    setMensajeActual('')
+
+    // Agregar mensaje del usuario
+    agregarMensaje({
+      tipo: 'usuario',
+      texto: mensajeUsuario,
+      timestamp: new Date()
+    })
+
+    setLoading(true)
+
+    try {
+      const respuesta = await enviarMensajeIA(mensajeUsuario, contexto)
+      
+      if (respuesta.success) {
+        agregarMensaje({
+          tipo: 'bot',
+          texto: respuesta.mensaje,
+          timestamp: new Date()
+        })
+      } else {
+        // Si hay un error, mostrar el mensaje de error con instrucciones
+        agregarMensaje({
+          tipo: 'bot',
+          texto: respuesta.mensaje,
+          timestamp: new Date()
+        })
+      }
+    } catch (error) {
+      console.error('Error enviando mensaje:', error)
+      let mensajeError = 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.'
+      
+      if (error.message.includes('API Key') || error.message.includes('VITE_GEMINI_API_KEY')) {
+        mensajeError = '⚠️ API Key de Gemini no configurada.\n\nPara configurarla:\n1. Crea un archivo .env en la raíz del proyecto\n2. Agrega: VITE_GEMINI_API_KEY=tu_api_key_aqui\n3. Obtén tu API key en: https://aistudio.google.com/apikey\n4. Reinicia el servidor de desarrollo'
+      } else if (error.message.includes('no está disponible') || error.message.includes('404')) {
+        mensajeError = '⚠️ El modelo de IA no está disponible con tu API key.\n\nVerifica que:\n1. Tu API key sea válida\n2. Tengas acceso a Gemini API en Google AI Studio\n3. La API key tenga permisos para usar los modelos'
+      }
+      
+      agregarMensaje({
+        tipo: 'bot',
+        texto: mensajeError,
+        timestamp: new Date()
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      enviarMensaje()
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-end pointer-events-none lg:items-center lg:justify-center">
+      {/* Overlay */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
+        onClick={onClose}
+      />
+
+      {/* Chat Container */}
+      <div className="relative w-full h-full max-w-md max-h-[90vh] bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl flex flex-col pointer-events-auto lg:h-[80vh] lg:max-h-[600px] animate-in slide-in-from-bottom lg:slide-in-from-right duration-300">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <Bot size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm">FinBot</h3>
+              <p className="text-xs text-white/80">Tu asistente financiero</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Mensajes */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          {cargandoContexto ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="animate-spin text-purple-600" size={24} />
+              <span className="ml-2 text-sm text-gray-600">Cargando tu información...</span>
+            </div>
+          ) : mensajes.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 text-sm">
+              <Sparkles className="mx-auto mb-2 text-purple-500" size={32} />
+              <p>¡Hola! ¿En qué puedo ayudarte con tus finanzas?</p>
+            </div>
+          ) : (
+            mensajes.map((mensaje, index) => (
+              <div
+                key={index}
+                className={`flex ${mensaje.tipo === 'usuario' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-2xl p-3 ${
+                    mensaje.tipo === 'usuario'
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white'
+                      : 'bg-white text-gray-800 shadow-md border border-gray-200'
+                  }`}
+                >
+                  {mensaje.tipo === 'bot' && (
+                    <div className="flex items-center gap-2 mb-1">
+                      <Bot size={14} className="text-purple-500" />
+                      <span className="text-xs font-semibold text-purple-600">FinBot</span>
+                    </div>
+                  )}
+                  <p className="text-sm whitespace-pre-wrap">{mensaje.texto}</p>
+                  <span className="text-xs opacity-70 mt-1 block">
+                    {new Date(mensaje.timestamp).toLocaleTimeString('es-CO', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-200">
+                <Loader2 className="animate-spin text-purple-600" size={16} />
+              </div>
+            </div>
+          )}
+          <div ref={mensajesEndRef} />
+        </div>
+
+        {/* Input */}
+        <div className="p-4 bg-white border-t border-gray-200 rounded-b-2xl">
+          <div className="flex items-end gap-2">
+            <textarea
+              value={mensajeActual}
+              onChange={(e) => setMensajeActual(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Escribe tu pregunta..."
+              disabled={loading || cargandoContexto || !contexto}
+              className="flex-1 min-h-[40px] max-h-24 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+              rows={1}
+            />
+            <button
+              onClick={enviarMensaje}
+              disabled={!mensajeActual.trim() || loading || cargandoContexto || !contexto}
+              className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                <Send size={20} />
+              )}
+            </button>
+          </div>
+          {!contexto && (
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Cargando tu información financiera...
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default AsistenteIA
+

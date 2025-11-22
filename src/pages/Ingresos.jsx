@@ -4,9 +4,11 @@ import Modal from '../components/Modal'
 import DeleteModal from '../components/DeleteModal'
 import DetailModal from '../components/DetailModal'
 import { ingresosService } from '../services/ingresosService'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
+import { convertirAMonedaBase, convertirMoneda } from '../services/conversionService'
 
 const Ingresos = () => {
+  const { formatCurrency, moneda } = useFormatCurrency()
   const [ingresos, setIngresos] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -31,11 +33,13 @@ const Ingresos = () => {
   const handleEdit = (ingreso) => {
     setIsEditing(true)
     setSelectedIngreso(ingreso)
+    // Convertir el monto de COP a la moneda seleccionada para mostrarlo
+    const montoConvertido = convertirMoneda(parseFloat(ingreso.monto), moneda.codigo)
     setFormData({
       fecha: ingreso.fecha,
       descripcion: ingreso.descripcion,
       categoria: ingreso.categoria,
-      monto: ingreso.monto.toString()
+      monto: montoConvertido.toString()
     })
     setIsModalOpen(true)
   }
@@ -90,10 +94,18 @@ const Ingresos = () => {
     e.preventDefault()
     try {
       setError(null)
+      // Convertir el monto de la moneda seleccionada a COP antes de guardar
+      const montoEnCOP = convertirAMonedaBase(parseFloat(formData.monto), moneda.codigo)
+      
+      const formDataParaGuardar = {
+        ...formData,
+        monto: Math.round(montoEnCOP).toString() // Redondear a entero
+      }
+
       if (isEditing) {
-        await ingresosService.update(selectedIngreso.id, formData)
+        await ingresosService.update(selectedIngreso.id, formDataParaGuardar)
       } else {
-        await ingresosService.create(formData)
+        await ingresosService.create(formDataParaGuardar)
       }
       await loadIngresos()
       setIsModalOpen(false)
@@ -247,7 +259,7 @@ const Ingresos = () => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Monto (COP)</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Monto ({moneda.codigo})</label>
             <input
               type="number"
               required

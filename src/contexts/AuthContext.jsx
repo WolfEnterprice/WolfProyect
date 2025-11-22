@@ -67,6 +67,24 @@ export const AuthProvider = ({ children }) => {
     return user?.id || null
   }
 
+  // Función para actualizar la contraseña
+  const updatePassword = async (newPassword) => {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    })
+    if (error) throw error
+    return data
+  }
+
+  // Función para actualizar el correo electrónico
+  const updateEmail = async (newEmail) => {
+    const { data, error } = await supabase.auth.updateUser({
+      email: newEmail
+    })
+    if (error) throw error
+    return data
+  }
+
   const value = {
     user,
     session,
@@ -75,6 +93,8 @@ export const AuthProvider = ({ children }) => {
     signUp,
     signOut,
     getUserId,
+    updatePassword,
+    updateEmail,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

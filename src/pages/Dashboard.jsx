@@ -5,9 +5,10 @@ import StatCard from '../components/StatCard'
 import { ingresosService } from '../services/ingresosService'
 import { gastosService } from '../services/gastosService'
 import { ahorroService } from '../services/ahorroService'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
 
 const Dashboard = () => {
+  const { formatCurrency } = useFormatCurrency()
   const [stats, setStats] = useState({
     totalIngresos: 0,
     totalGastos: 0,
@@ -33,22 +34,26 @@ const Dashboard = () => {
       setError(null)
       
       const [ingresos, gastos, ahorro] = await Promise.all([
-        ingresosService.getAll(),
-        gastosService.getAll(),
-        ahorroService.get()
+        ingresosService.getAll().catch(() => []), // Si falla, usar array vacío
+        gastosService.getAll().catch(() => []),   // Si falla, usar array vacío
+        ahorroService.get().catch(() => ({ ahorroActual: 0, ahorroMeta: 2000 })) // Si falla, usar valores por defecto
       ])
 
       const totalIngresos = ingresos.reduce((sum, ing) => sum + parseFloat(ing.monto || 0), 0)
       const totalGastos = gastos.reduce((sum, gas) => sum + parseFloat(gas.monto || 0), 0)
       const balance = totalIngresos - totalGastos
 
-      setStats({
-        totalIngresos,
-        totalGastos,
-        balance,
-        ahorroActual: ahorro.ahorroActual || 0,
-        ahorroMeta: ahorro.ahorroMeta || 2000
-      })
+          // Manejar tanto camelCase como snake_case
+          const ahorroActual = ahorro.ahorroActual || ahorro["ahorroActual"] || 0
+          const ahorroMeta = ahorro.ahorroMeta || ahorro["ahorroMeta"] || 2000
+          
+          setStats({
+            totalIngresos,
+            totalGastos,
+            balance,
+            ahorroActual,
+            ahorroMeta
+          })
 
       // Procesar gastos por categoría
       const gastosPorCat = {}

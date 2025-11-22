@@ -1,6 +1,7 @@
-import { formatCurrency } from '../utils/formatCurrency'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
 
 const StatCard = ({ title, value, icon: Icon, color = 'blue' }) => {
+  const { formatCurrency } = useFormatCurrency()
   const colorConfig = {
     blue: {
       iconBg: 'bg-gradient-to-br from-blue-400 to-blue-600',

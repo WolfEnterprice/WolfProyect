@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Edit2, Save, X, Loader2, Plus, Trash2 } from 'lucide-react'
 import { presupuestosService } from '../services/presupuestosService'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
+import { convertirAMonedaBase, convertirMoneda } from '../services/conversionService'
 import Modal from '../components/Modal'
 import DeleteModal from '../components/DeleteModal'
 
 const Presupuesto = () => {
+  const { formatCurrency, moneda } = useFormatCurrency()
   const [presupuestos, setPresupuestos] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -59,9 +61,11 @@ const Presupuesto = () => {
     setIsEditing(true)
     const presupuesto = presupuestos[index]
     setSelectedPresupuesto(presupuesto)
+    // Convertir el monto de COP a la moneda seleccionada para mostrarlo
+    const montoConvertido = convertirMoneda(parseFloat(presupuesto.presupuesto), moneda.codigo)
     setFormData({
       categoria: presupuesto.categoria,
-      presupuesto: presupuesto.presupuesto.toString()
+      presupuesto: montoConvertido.toString()
     })
     setIsModalOpen(true)
   }
@@ -88,10 +92,18 @@ const Presupuesto = () => {
     e.preventDefault()
     try {
       setError(null)
+      // Convertir el monto de la moneda seleccionada a COP antes de guardar
+      const montoEnCOP = convertirAMonedaBase(parseFloat(formData.presupuesto), moneda.codigo)
+      
+      const formDataParaGuardar = {
+        ...formData,
+        presupuesto: Math.round(montoEnCOP).toString()
+      }
+
       if (isEditing) {
-        await presupuestosService.update(selectedPresupuesto.id, formData)
+        await presupuestosService.update(selectedPresupuesto.id, formDataParaGuardar)
       } else {
-        await presupuestosService.upsert(formData)
+        await presupuestosService.upsert(formDataParaGuardar)
       }
       await loadPresupuestos()
       setIsModalOpen(false)
@@ -105,8 +117,10 @@ const Presupuesto = () => {
 
   const handleQuickEdit = (index) => {
     setEditingIndex(index)
+    // Convertir el monto de COP a la moneda seleccionada para mostrarlo
+    const montoConvertido = convertirMoneda(parseFloat(presupuestos[index].presupuesto), moneda.codigo)
     setEditData({
-      presupuesto: presupuestos[index].presupuesto.toString()
+      presupuesto: montoConvertido.toString()
     })
   }
 
@@ -114,9 +128,12 @@ const Presupuesto = () => {
     try {
       setError(null)
       const presupuesto = presupuestos[index]
+      // Convertir el monto de la moneda seleccionada a COP antes de guardar
+      const montoEnCOP = convertirAMonedaBase(parseFloat(editData.presupuesto), moneda.codigo)
+      
       await presupuestosService.update(presupuesto.id, {
         categoria: presupuesto.categoria,
-        presupuesto: editData.presupuesto
+        presupuesto: Math.round(montoEnCOP).toString()
       })
       await loadPresupuestos()
       setEditingIndex(null)
@@ -352,7 +369,7 @@ const Presupuesto = () => {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Presupuesto (COP)
+              Presupuesto ({moneda.codigo})
             </label>
             <input
               type="number"

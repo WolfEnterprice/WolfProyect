@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import BotonAsistenteIA from './BotonAsistenteIA'
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -14,6 +15,8 @@ const Layout = ({ children }) => {
           {children}
         </main>
       </div>
+      {/* Botón flotante del Asistente IA */}
+      <BotonAsistenteIA />
     </div>
   )
 }

@@ -4,9 +4,11 @@ import Modal from '../components/Modal'
 import DeleteModal from '../components/DeleteModal'
 import DetailModal from '../components/DetailModal'
 import { gastosService } from '../services/gastosService'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
+import { convertirAMonedaBase, convertirMoneda } from '../services/conversionService'
 
 const Gastos = () => {
+  const { formatCurrency, moneda } = useFormatCurrency()
   const [gastos, setGastos] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -32,11 +34,13 @@ const Gastos = () => {
   const handleEdit = (gasto) => {
     setIsEditing(true)
     setSelectedGasto(gasto)
+    // Convertir el monto de COP a la moneda seleccionada para mostrarlo
+    const montoConvertido = convertirMoneda(parseFloat(gasto.monto), moneda.codigo)
     setFormData({
       fecha: gasto.fecha,
       descripcion: gasto.descripción || gasto.descripcion,
       categoria: gasto.categoría || gasto.categoria,
-      monto: gasto.monto.toString(),
+      monto: montoConvertido.toString(),
       metodoPago: gasto.metodoPago || gasto.metodo_pago
     })
     setIsModalOpen(true)
@@ -93,10 +97,18 @@ const Gastos = () => {
     e.preventDefault()
     try {
       setError(null)
+      // Convertir el monto de la moneda seleccionada a COP antes de guardar
+      const montoEnCOP = convertirAMonedaBase(parseFloat(formData.monto), moneda.codigo)
+      
+      const formDataParaGuardar = {
+        ...formData,
+        monto: Math.round(montoEnCOP).toString() // Redondear a entero
+      }
+
       if (isEditing) {
-        await gastosService.update(selectedGasto.id, formData)
+        await gastosService.update(selectedGasto.id, formDataParaGuardar)
       } else {
-        await gastosService.create(formData)
+        await gastosService.create(formDataParaGuardar)
       }
       await loadGastos()
       setIsModalOpen(false)
@@ -252,7 +264,7 @@ const Gastos = () => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Monto (COP)</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Monto ({moneda.codigo})</label>
             <input
               type="number"
               required

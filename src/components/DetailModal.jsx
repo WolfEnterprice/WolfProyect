@@ -1,7 +1,8 @@
 import { X, Calendar, FileText, Tag, DollarSign, CreditCard } from 'lucide-react'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
 
 const DetailModal = ({ isOpen, onClose, item, type = 'ingreso' }) => {
+  const { formatCurrency } = useFormatCurrency()
   if (!isOpen || !item) return null
 
   return (

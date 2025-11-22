@@ -1,15 +1,27 @@
 import { supabase } from '../lib/supabase'
 
 export const presupuestosService = {
-  // Obtener todos los presupuestos
+  // Obtener todos los presupuestos (RLS filtra automáticamente por usuario)
   async getAll() {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error('Usuario no autenticado')
+    }
+
     const { data, error } = await supabase
       .from('presupuestos')
       .select('*')
+      .eq('user_id', user.id) // Filtrar explícitamente por usuario
       .order('categoria', { ascending: true })
     
-    if (error) throw error
-    return data
+    if (error) {
+      console.error('Error obteniendo presupuestos:', error)
+      throw error
+    }
+    
+    // Retornar array vacío si no hay datos (usuario nuevo)
+    return data || []
   },
 
   // Obtener un presupuesto por categoría

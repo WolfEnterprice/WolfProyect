@@ -10,6 +10,7 @@ import Gastos from './pages/Gastos'
 import Presupuesto from './pages/Presupuesto'
 import Ahorro from './pages/Ahorro'
 import Historial from './pages/Historial'
+import Configuracion from './pages/Configuracion'
 
 function App() {
   const { user, loading } = useAuth()
@@ -26,7 +27,12 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <Routes>
         {/* Rutas públicas */}
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
@@ -89,6 +95,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Historial />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/configuracion"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Configuracion />
               </Layout>
             </ProtectedRoute>
           }

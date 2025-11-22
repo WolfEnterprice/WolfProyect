@@ -1,7 +1,9 @@
-import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, TrendingUp, TrendingDown, Target, PiggyBank, History, X } from 'lucide-react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { LayoutDashboard, TrendingUp, TrendingDown, Target, PiggyBank, History, Settings, X } from 'lucide-react'
 
 const Sidebar = ({ isOpen, onClose }) => {
+  const location = useLocation()
+  
   const menuItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/ingresos', label: 'Ingresos', icon: TrendingUp },
@@ -9,6 +11,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/presupuesto', label: 'Presupuesto', icon: Target },
     { path: '/ahorro', label: 'Ahorro', icon: PiggyBank },
     { path: '/historial', label: 'Historial', icon: History },
+    { path: '/configuracion', label: 'Configuración', icon: Settings },
   ]
 
   return (
@@ -49,12 +52,32 @@ const Sidebar = ({ isOpen, onClose }) => {
                 className={({ isActive }) =>
                   `group flex items-center gap-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${
                     isActive
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform scale-105 font-semibold'
-                      : 'text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-md'
+                      ? 'text-white shadow-lg transform scale-105 font-semibold'
+                      : 'text-gray-700 hover:shadow-md'
                   }`
                 }
+                style={({ isActive }) => isActive ? {
+                  background: 'var(--gradient-primary)',
+                } : {}}
+                onMouseEnter={(e) => {
+                  if (location.pathname !== item.path) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-primary-lighter)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (location.pathname !== item.path) {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }
+                }}
               >
-                <Icon size={22} className={({ isActive }) => isActive ? 'text-white' : 'text-gray-600 group-hover:text-blue-600'} />
+                <Icon 
+                  size={22} 
+                  className={
+                    location.pathname === item.path
+                      ? 'text-white'
+                      : 'text-gray-600 group-hover:text-blue-600'
+                  }
+                />
                 <span className="font-medium">{item.label}</span>
               </NavLink>
             )

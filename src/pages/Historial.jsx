@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { Calendar, TrendingUp, TrendingDown, DollarSign, Loader2, ChevronRight } from 'lucide-react'
 import { ingresosService } from '../services/ingresosService'
 import { gastosService } from '../services/gastosService'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
 
 const Historial = () => {
+  const { formatCurrency } = useFormatCurrency()
   const [historialMensual, setHistorialMensual] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)

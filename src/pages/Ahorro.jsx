@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Target, Sparkles, TrendingUp, Plus, Edit2, Loader2 } from 'lucide-react'
 import { ahorroService } from '../services/ahorroService'
-import { formatCurrency } from '../utils/formatCurrency'
+import { useFormatCurrency } from '../hooks/useFormatCurrency'
+import { convertirAMonedaBase, convertirMoneda } from '../services/conversionService'
 import Modal from '../components/Modal'
 
 const Ahorro = () => {
+  const { formatCurrency, moneda } = useFormatCurrency()
   const [ahorroActual, setAhorroActual] = useState(0)
   const [ahorroMeta, setAhorroMeta] = useState(2000)
   const [loading, setLoading] = useState(true)
@@ -16,16 +18,22 @@ const Ahorro = () => {
 
   useEffect(() => {
     loadAhorro()
-  }, [])
+  }, [moneda.codigo]) // Recargar cuando cambie la moneda
 
   const loadAhorro = async () => {
     try {
       setLoading(true)
       setError(null)
       const data = await ahorroService.get()
-      setAhorroActual(data.ahorroActual || 0)
-      setAhorroMeta(data.ahorroMeta || 2000)
-      setNuevaMeta((data.ahorroMeta || 2000).toString())
+      // Manejar tanto camelCase como snake_case
+      const actual = data.ahorroActual || data["ahorroActual"] || 0
+      const meta = data.ahorroMeta || data["ahorroMeta"] || 2000
+      // Los valores vienen en COP, se mostrarán convertidos automáticamente por formatCurrency
+      setAhorroActual(actual)
+      setAhorroMeta(meta)
+      // Convertir la meta a la moneda seleccionada para mostrarla en el formulario
+      const metaConvertida = convertirMoneda(meta, moneda.codigo)
+      setNuevaMeta(metaConvertida.toString())
     } catch (err) {
       setError(err.message)
       console.error('Error cargando ahorro:', err)
@@ -43,7 +51,9 @@ const Ahorro = () => {
       setError(null)
       const monto = parseFloat(montoAgregar)
       if (monto > 0) {
-        await ahorroService.updateAhorroActual(monto)
+        // Convertir el monto de la moneda seleccionada a COP antes de guardar
+        const montoEnCOP = convertirAMonedaBase(monto, moneda.codigo)
+        await ahorroService.updateAhorroActual(Math.round(montoEnCOP))
         await loadAhorro()
         setMontoAgregar('')
         setIsAddModalOpen(false)
@@ -60,7 +70,9 @@ const Ahorro = () => {
       setError(null)
       const meta = parseFloat(nuevaMeta)
       if (meta > 0) {
-        await ahorroService.updateAhorroMeta(meta)
+        // Convertir el monto de la moneda seleccionada a COP antes de guardar
+        const metaEnCOP = convertirAMonedaBase(meta, moneda.codigo)
+        await ahorroService.updateAhorroMeta(Math.round(metaEnCOP))
         await loadAhorro()
         setIsEditMetaModalOpen(false)
       }
@@ -202,7 +214,7 @@ const Ahorro = () => {
         <form onSubmit={handleAddAhorro} className="space-y-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Monto a agregar (COP)
+              Monto a agregar ({moneda.codigo})
             </label>
             <input
               type="number"
@@ -257,7 +269,7 @@ const Ahorro = () => {
         <form onSubmit={handleEditMeta} className="space-y-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Nueva meta (COP)
+              Nueva meta ({moneda.codigo})
             </label>
             <input
               type="number"

@@ -1,12 +1,18 @@
 import { supabase } from '../lib/supabase'
 
 export const ahorroService = {
-  // Obtener el estado del ahorro (primera fila)
+  // Obtener el estado del ahorro (del usuario actual)
   async get() {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error('Usuario no autenticado')
+    }
+
     const { data, error } = await supabase
       .from('ahorro')
       .select('*')
-      .limit(1)
+      .eq('user_id', user.id) // Filtrar por usuario
       .single()
     
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -15,7 +21,7 @@ export const ahorroService = {
     
     // Si no existe, crear uno por defecto
     if (!data) {
-      return await this.create({ ahorro_actual: 0, ahorro_meta: 2000 })
+      return await this.create({ ahorroActual: 0, ahorroMeta: 2000 })
     }
     
     return data
@@ -23,11 +29,18 @@ export const ahorroService = {
 
   // Crear estado de ahorro inicial
   async create(ahorro) {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error('Usuario no autenticado')
+    }
+
     const { data, error } = await supabase
       .from('ahorro')
       .insert([{
-        ahorroActual: parseFloat(ahorro.ahorroActual || 0),
-        ahorroMeta: parseFloat(ahorro.ahorroMeta || 2000)
+        ahorroActual: parseInt(ahorro.ahorroActual || 0, 10),
+        ahorroMeta: parseInt(ahorro.ahorroMeta || 2000, 10),
+        user_id: user.id // user_id se establecerá automáticamente por el trigger, pero lo incluimos por seguridad
       }])
       .select()
       .single()
@@ -40,8 +53,8 @@ export const ahorroService = {
   async updateAhorroActual(monto) {
     const current = await this.get()
     const nuevoAhorro = Math.min(
-      parseFloat(current.ahorroActual || 0) + parseFloat(monto),
-      parseFloat(current.ahorroMeta || 2000)
+      parseInt(current.ahorroActual || 0, 10) + parseInt(monto, 10),
+      parseInt(current.ahorroMeta || 2000, 10)
     )
     
     const { data, error } = await supabase
@@ -61,7 +74,7 @@ export const ahorroService = {
     
     const { data, error } = await supabase
       .from('ahorro')
-      .update({ ahorroMeta: parseFloat(meta) })
+      .update({ ahorroMeta: parseInt(meta, 10) })
       .eq('id', current.id)
       .select()
       .single()
@@ -77,8 +90,8 @@ export const ahorroService = {
     const { data, error } = await supabase
       .from('ahorro')
       .update({
-        ahorroActual: parseFloat(ahorro.ahorroActual),
-        ahorroMeta: parseFloat(ahorro.ahorroMeta)
+        ahorroActual: parseInt(ahorro.ahorroActual, 10),
+        ahorroMeta: parseInt(ahorro.ahorroMeta, 10)
       })
       .eq('id', current.id)
       .select()

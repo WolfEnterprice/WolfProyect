@@ -27,14 +27,21 @@ export const gastosService = {
 
   // Crear un nuevo gasto
   async create(gasto) {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error('Usuario no autenticado')
+    }
+
     const { data, error } = await supabase
       .from('gastos')
       .insert([{
         fecha: gasto.fecha,
         descripción: gasto.descripcion,
         categoría: gasto.categoria,
-        monto: parseFloat(gasto.monto),
-        metodoPago: gasto.metodoPago
+        monto: parseInt(gasto.monto, 10),
+        metodoPago: gasto.metodoPago,
+        user_id: user.id // user_id se establecerá automáticamente por el trigger, pero lo incluimos por seguridad
       }])
       .select()
       .single()
@@ -59,7 +66,7 @@ export const gastosService = {
         fecha: gasto.fecha,
         descripción: gasto.descripcion,
         categoría: gasto.categoria,
-        monto: parseFloat(gasto.monto),
+        monto: parseInt(gasto.monto, 10),
         metodoPago: gasto.metodoPago
       })
       .eq('id', id)

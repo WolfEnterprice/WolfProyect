@@ -14,10 +14,17 @@ export const presupuestosService = {
 
   // Obtener un presupuesto por categoría
   async getByCategoria(categoria) {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error('Usuario no autenticado')
+    }
+
     const { data, error } = await supabase
       .from('presupuestos')
       .select('*')
       .eq('categoria', categoria)
+      .eq('user_id', user.id) // Filtrar por usuario
       .maybeSingle()
     
     if (error) throw error
@@ -34,11 +41,18 @@ export const presupuestosService = {
       return await this.update(existing.id, presupuesto)
     } else {
       // Si no existe, crear
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('Usuario no autenticado')
+      }
+
       const { data, error } = await supabase
         .from('presupuestos')
         .insert({
           categoria: presupuesto.categoria,
-          presupuesto: parseInt(presupuesto.presupuesto, 10) || 0
+          presupuesto: parseInt(presupuesto.presupuesto, 10) || 0,
+          user_id: user.id // user_id se establecerá automáticamente por el trigger, pero lo incluimos por seguridad
         })
         .select()
         .single()
@@ -83,10 +97,17 @@ export const presupuestosService = {
 
   // Calcular gastado por categoría (suma de gastos)
   async getGastadoPorCategoria(categoria) {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error('Usuario no autenticado')
+    }
+
     const { data, error } = await supabase
       .from('gastos')
       .select('monto')
       .eq('categoría', categoria) // La tabla gastos usa 'categoría' con tilde
+      .eq('user_id', user.id) // Filtrar por usuario
     
     if (error) throw error
     
@@ -100,11 +121,18 @@ export const presupuestosService = {
       const existing = await this.getByCategoria(categoria)
       
       if (!existing) {
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          throw new Error('Usuario no autenticado')
+        }
+
         const { data, error } = await supabase
           .from('presupuestos')
           .insert({
             categoria,
-            presupuesto: parseInt(presupuestoInicial, 10) || 0
+            presupuesto: parseInt(presupuestoInicial, 10) || 0,
+            user_id: user.id // user_id se establecerá automáticamente por el trigger, pero lo incluimos por seguridad
           })
           .select()
           .single()
@@ -116,11 +144,18 @@ export const presupuestosService = {
       return existing
     } catch (err) {
       // Si hay error, intentar crear de todas formas
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('Usuario no autenticado')
+      }
+
       const { data, error } = await supabase
         .from('presupuestos')
         .insert({
           categoria,
-          presupuesto: parseInt(presupuestoInicial, 10) || 0
+          presupuesto: parseInt(presupuestoInicial, 10) || 0,
+          user_id: user.id // user_id se establecerá automáticamente por el trigger, pero lo incluimos por seguridad
         })
         .select()
         .single()

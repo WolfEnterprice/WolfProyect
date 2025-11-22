@@ -5,6 +5,7 @@ import { useFormatCurrency } from '../hooks/useFormatCurrency'
 import { convertirAMonedaBase, convertirMoneda } from '../services/conversionService'
 import Modal from '../components/Modal'
 import DeleteModal from '../components/DeleteModal'
+import Alert from '../components/Alert'
 
 const Presupuesto = () => {
   const { formatCurrency, moneda } = useFormatCurrency()
@@ -195,9 +196,11 @@ const Presupuesto = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
-          Error: {error}
-        </div>
+        <Alert
+          type="error"
+          title="Error"
+          message={error}
+        />
       )}
 
       {loading ? (

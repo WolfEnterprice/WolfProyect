@@ -4,6 +4,7 @@ import { ahorroService } from '../services/ahorroService'
 import { useFormatCurrency } from '../hooks/useFormatCurrency'
 import { convertirAMonedaBase, convertirMoneda } from '../services/conversionService'
 import Modal from '../components/Modal'
+import Alert from '../components/Alert'
 
 const Ahorro = () => {
   const { formatCurrency, moneda } = useFormatCurrency()
@@ -110,9 +111,11 @@ const Ahorro = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
-          Error: {error}
-        </div>
+        <Alert
+          type="error"
+          title="Error"
+          message={error}
+        />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -227,16 +230,21 @@ const Ahorro = () => {
               className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
-            <p className="text-xs text-amber-700">
-              <span className="font-semibold">Ahorro actual:</span> {formatCurrency(ahorroActual)}
-            </p>
-            {montoAgregar && parseFloat(montoAgregar) > 0 && (
-              <p className="text-xs text-amber-700 mt-1">
-                <span className="font-semibold">Nuevo total:</span> {formatCurrency(Math.min(ahorroActual + parseFloat(montoAgregar), ahorroMeta))}
-              </p>
-            )}
-          </div>
+          <Alert
+            type="info"
+            compact={true}
+            message={
+              <>
+                <span className="font-semibold">Ahorro actual:</span> {formatCurrency(ahorroActual)}
+                {montoAgregar && parseFloat(montoAgregar) > 0 && (
+                  <>
+                    <br />
+                    <span className="font-semibold">Nuevo total:</span> {formatCurrency(Math.min(ahorroActual + parseFloat(montoAgregar), ahorroMeta))}
+                  </>
+                )}
+              </>
+            }
+          />
           <div className="flex gap-2 pt-2">
             <button
               type="button"
@@ -282,19 +290,23 @@ const Ahorro = () => {
               className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
-            <p className="text-xs text-amber-700">
-              <span className="font-semibold">Meta actual:</span> {formatCurrency(ahorroMeta)}
-            </p>
-            <p className="text-xs text-amber-700 mt-1">
-              <span className="font-semibold">Ahorro actual:</span> {formatCurrency(ahorroActual)}
-            </p>
-            {nuevaMeta && parseFloat(nuevaMeta) > 0 && (
-              <p className="text-xs text-amber-700 mt-1">
-                <span className="font-semibold">Nuevo progreso:</span> {((ahorroActual / parseFloat(nuevaMeta)) * 100).toFixed(1)}%
-              </p>
-            )}
-          </div>
+          <Alert
+            type="info"
+            compact={true}
+            message={
+              <>
+                <span className="font-semibold">Meta actual:</span> {formatCurrency(ahorroMeta)}
+                <br />
+                <span className="font-semibold">Ahorro actual:</span> {formatCurrency(ahorroActual)}
+                {nuevaMeta && parseFloat(nuevaMeta) > 0 && (
+                  <>
+                    <br />
+                    <span className="font-semibold">Nuevo progreso:</span> {((ahorroActual / parseFloat(nuevaMeta)) * 100).toFixed(1)}%
+                  </>
+                )}
+              </>
+            }
+          />
           <div className="flex gap-2 pt-2">
             <button
               type="button"

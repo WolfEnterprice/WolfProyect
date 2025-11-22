@@ -1,4 +1,4 @@
-import { Menu, Bell, User, LogOut } from 'lucide-react'
+import { Menu, User, LogOut } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -26,10 +26,6 @@ const Header = ({ onMenuClick }) => {
         </button>
         <div className="flex-1" />
         <div className="flex items-center gap-4">
-          <button className="relative text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full p-2 transition-all duration-200">
-            <Bell size={20} />
-            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-gradient-to-r from-pink-500 to-red-500 rounded-full ring-2 ring-white"></span>
-          </button>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-xs font-semibold text-gray-700">

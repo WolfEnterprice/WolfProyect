@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Send, Bot, DollarSign, Loader2, Sparkles } from 'lucide-react'
+import { X, Send, Bot, DollarSign, Loader2, Sparkles, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { ingresosService } from '../services/ingresosService'
 import { gastosService } from '../services/gastosService'
 import { presupuestosService } from '../services/presupuestosService'
 import { ahorroService } from '../services/ahorroService'
 import { getUsuarioContexto, enviarMensajeIA, generarTipsAutomaticos } from '../services/geminiService'
+import { chatService } from '../services/chatService'
+import DeleteModal from './DeleteModal'
 
 const AsistenteIA = ({ isOpen, onClose }) => {
   const [mensajes, setMensajes] = useState([])
@@ -13,12 +15,18 @@ const AsistenteIA = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false)
   const [cargandoContexto, setCargandoContexto] = useState(true)
   const [contexto, setContexto] = useState(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const mensajesEndRef = useRef(null)
   const { user } = useAuth()
 
   useEffect(() => {
-    if (isOpen && !contexto) {
-      cargarContexto()
+    if (isOpen) {
+      if (!contexto) {
+        cargarContexto()
+      } else {
+        // Si ya hay contexto, solo cargar el historial guardado
+        cargarHistorial()
+      }
     }
   }, [isOpen])
 
@@ -26,9 +34,13 @@ const AsistenteIA = ({ isOpen, onClose }) => {
     scrollToBottom()
   }, [mensajes])
 
-  const cargarContexto = async () => {
+  const cargarContexto = async (mostrarBienvenida = true) => {
     try {
       setCargandoContexto(true)
+      
+      // Cargar historial guardado primero
+      await cargarHistorial()
+      
       const [ingresos, gastos, presupuestosData, ahorro] = await Promise.all([
         ingresosService.getAll(),
         gastosService.getAll(),
@@ -47,26 +59,14 @@ const AsistenteIA = ({ isOpen, onClose }) => {
       const contextoUsuario = await getUsuarioContexto(ingresos, gastos, presupuestos, ahorro)
       setContexto(contextoUsuario)
 
-      // Agregar mensaje de bienvenida con tips automáticos
-      agregarMensaje({
-        tipo: 'bot',
-        texto: '¡Hola! 👋 Soy FinBot, tu asistente financiero personal. Analizando tu situación financiera...',
-        timestamp: new Date()
-      })
-
-      // Generar tips automáticos
-      const tips = await generarTipsAutomaticos(contextoUsuario)
-      if (tips.success) {
-        agregarMensaje({
+      // Solo agregar mensaje de bienvenida si no hay historial guardado
+      const mensajesGuardados = await chatService.getAll()
+      const tieneHistorial = mensajesGuardados && mensajesGuardados.length > 0
+      
+      if (mostrarBienvenida && !tieneHistorial) {
+        await agregarMensaje({
           tipo: 'bot',
-          texto: tips.mensaje,
-          timestamp: new Date()
-        })
-      } else {
-        // Si falla, mostrar el mensaje de error
-        agregarMensaje({
-          tipo: 'bot',
-          texto: tips.mensaje || 'No pude generar tips automáticos. Pero puedes hacerme preguntas sobre tus finanzas.',
+          texto: '¡Hola! 👋 Soy FinBot, tu asistente financiero personal. Estoy aquí para ayudarte con cualquier pregunta sobre tus finanzas.\n\nPuedes preguntarme sobre:\n• Cómo mejorar tus ahorros\n• Análisis de tus gastos\n• Consejos para cumplir tus presupuestos\n• Estrategias financieras\n• Y mucho más...\n\n¿En qué te gustaría que te ayude hoy?',
           timestamp: new Date()
         })
       }
@@ -78,7 +78,7 @@ const AsistenteIA = ({ isOpen, onClose }) => {
         mensajeError = '⚠️ API Key de Gemini no configurada.\n\nPara configurarla:\n1. Crea un archivo .env en la raíz del proyecto\n2. Agrega: VITE_GEMINI_API_KEY=tu_api_key_aqui\n3. Obtén tu API key en: https://aistudio.google.com/apikey\n4. Reinicia el servidor de desarrollo\n\nMientras tanto, puedes usar la aplicación normalmente, pero el asistente IA no estará disponible.'
       }
       
-      agregarMensaje({
+      await agregarMensaje({
         tipo: 'bot',
         texto: mensajeError,
         timestamp: new Date()
@@ -88,8 +88,43 @@ const AsistenteIA = ({ isOpen, onClose }) => {
     }
   }
 
-  const agregarMensaje = (mensaje) => {
+  const agregarMensaje = async (mensaje) => {
     setMensajes(prev => [...prev, mensaje])
+    
+    // Guardar mensaje en la base de datos (solo si hay usuario autenticado)
+    if (user) {
+      try {
+        await chatService.create({
+          tipo: mensaje.tipo,
+          texto: mensaje.texto
+        })
+      } catch (error) {
+        // Si falla, solo loguear el error pero no interrumpir la UI
+        console.warn('No se pudo guardar el mensaje en la BD:', error)
+      }
+    }
+  }
+
+  const cargarHistorial = async () => {
+    if (!user) return
+    
+    try {
+      const mensajesGuardados = await chatService.getAll()
+      
+      if (mensajesGuardados && mensajesGuardados.length > 0) {
+        // Convertir mensajes de la BD al formato del componente
+        const mensajesFormateados = mensajesGuardados.map(msg => ({
+          tipo: msg.tipo,
+          texto: msg.texto,
+          timestamp: new Date(msg.created_at)
+        }))
+        
+        setMensajes(mensajesFormateados)
+      }
+    } catch (error) {
+      console.warn('No se pudo cargar el historial del chat:', error)
+      // Si falla, continuar sin historial (chat nuevo)
+    }
   }
 
   const scrollToBottom = () => {
@@ -103,7 +138,7 @@ const AsistenteIA = ({ isOpen, onClose }) => {
     setMensajeActual('')
 
     // Agregar mensaje del usuario
-    agregarMensaje({
+    await agregarMensaje({
       tipo: 'usuario',
       texto: mensajeUsuario,
       timestamp: new Date()
@@ -112,17 +147,19 @@ const AsistenteIA = ({ isOpen, onClose }) => {
     setLoading(true)
 
     try {
-      const respuesta = await enviarMensajeIA(mensajeUsuario, contexto)
+      // Pasar el historial de conversación (últimos 10 mensajes para mantener contexto)
+      const historialReciente = mensajes.slice(-10)
+      const respuesta = await enviarMensajeIA(mensajeUsuario, contexto, historialReciente)
       
       if (respuesta.success) {
-        agregarMensaje({
+        await agregarMensaje({
           tipo: 'bot',
           texto: respuesta.mensaje,
           timestamp: new Date()
         })
       } else {
         // Si hay un error, mostrar el mensaje de error con instrucciones
-        agregarMensaje({
+        await agregarMensaje({
           tipo: 'bot',
           texto: respuesta.mensaje,
           timestamp: new Date()
@@ -138,7 +175,7 @@ const AsistenteIA = ({ isOpen, onClose }) => {
         mensajeError = '⚠️ El modelo de IA no está disponible con tu API key.\n\nVerifica que:\n1. Tu API key sea válida\n2. Tengas acceso a Gemini API en Google AI Studio\n3. La API key tenga permisos para usar los modelos'
       }
       
-      agregarMensaje({
+      await agregarMensaje({
         tipo: 'bot',
         texto: mensajeError,
         timestamp: new Date()
@@ -153,6 +190,30 @@ const AsistenteIA = ({ isOpen, onClose }) => {
       e.preventDefault()
       enviarMensaje()
     }
+  }
+
+  const borrarChat = () => {
+    setIsDeleteModalOpen(true)
+  }
+
+  const confirmarBorrarChat = async () => {
+    try {
+      // Borrar mensajes de la base de datos
+      if (user) {
+        await chatService.deleteAll()
+      }
+    } catch (error) {
+      console.warn('No se pudo borrar el historial de la BD:', error)
+    }
+    
+    // Limpiar mensajes del estado
+    setMensajes([])
+    setMensajeActual('')
+    setLoading(false)
+    
+    // Recargar contexto y mostrar nuevo mensaje de bienvenida
+    await cargarContexto(true)
+    setIsDeleteModalOpen(false)
   }
 
   if (!isOpen) return null
@@ -178,12 +239,23 @@ const AsistenteIA = ({ isOpen, onClose }) => {
               <p className="text-xs text-white/80">Tu asistente financiero</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-full transition-colors"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {mensajes.length > 0 && !cargandoContexto && (
+              <button
+                onClick={borrarChat}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                title="Borrar conversación"
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Mensajes */}
@@ -240,12 +312,36 @@ const AsistenteIA = ({ isOpen, onClose }) => {
 
         {/* Input */}
         <div className="p-4 bg-white border-t border-gray-200 rounded-b-2xl">
+          {/* Sugerencias de preguntas rápidas */}
+          {mensajes.length > 0 && mensajes.length <= 2 && !loading && contexto && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => setMensajeActual('¿Cómo puedo ahorrar más dinero?')}
+                className="px-3 py-1.5 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-full border border-purple-200 transition-colors"
+              >
+                💰 ¿Cómo ahorrar más?
+              </button>
+              <button
+                onClick={() => setMensajeActual('¿En qué categoría gasto más?')}
+                className="px-3 py-1.5 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full border border-blue-200 transition-colors"
+              >
+                📊 ¿Dónde gasto más?
+              </button>
+              <button
+                onClick={() => setMensajeActual('Dame consejos para mejorar mis finanzas')}
+                className="px-3 py-1.5 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded-full border border-green-200 transition-colors"
+              >
+                💡 Consejos financieros
+              </button>
+            </div>
+          )}
+          
           <div className="flex items-end gap-2">
             <textarea
               value={mensajeActual}
               onChange={(e) => setMensajeActual(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Escribe tu pregunta..."
+              placeholder="Escribe tu pregunta o mensaje..."
               disabled={loading || cargandoContexto || !contexto}
               className="flex-1 min-h-[40px] max-h-24 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
               rows={1}

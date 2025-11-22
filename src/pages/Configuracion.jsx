@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { categoriasService } from '../services/categoriasService'
 import Modal from '../components/Modal'
 import DeleteModal from '../components/DeleteModal'
+import Alert from '../components/Alert'
 
 const Configuracion = () => {
   const { user, signOut, updatePassword, updateEmail } = useAuth()
@@ -228,15 +229,20 @@ const Configuracion = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
-          ⚠️ {error}
-        </div>
+        <Alert
+          type="error"
+          title="Error"
+          message={error}
+        />
       )}
 
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm">
-          ✅ {successMessage}
-        </div>
+        <Alert
+          type="success"
+          title="Éxito"
+          message={successMessage}
+          onClose={() => setSuccessMessage(null)}
+        />
       )}
 
       {/* Información del Usuario */}
@@ -448,11 +454,12 @@ const Configuracion = () => {
             <p className="text-xs text-gray-500 mt-1">
               Actualmente: {moneda.nombre} ({moneda.codigo})
             </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
-              <p className="text-xs text-blue-700">
-                💡 <strong>Nota:</strong> Todos los valores se convertirán automáticamente de COP (moneda base) a {moneda.nombre}. Los valores se muestran convertidos pero se guardan en COP en la base de datos.
-              </p>
-            </div>
+            <Alert
+              type="info"
+              compact={true}
+              message={`Todos los valores se convertirán automáticamente de COP (moneda base) a ${moneda.nombre}. Los valores se muestran convertidos pero se guardan en COP en la base de datos.`}
+              className="mt-2"
+            />
           </div>
 
           {/* Selector de Color del Tema */}
@@ -717,11 +724,11 @@ const Configuracion = () => {
               className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
-            <p className="text-xs text-blue-700">
-              💡 <strong>Nota:</strong> La contraseña debe tener al menos 6 caracteres.
-            </p>
-          </div>
+          <Alert
+            type="info"
+            compact={true}
+            message="La contraseña debe tener al menos 6 caracteres."
+          />
           <div className="flex gap-2 pt-2">
             <button
               type="button"
@@ -789,11 +796,11 @@ const Configuracion = () => {
               className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
-            <p className="text-xs text-amber-700">
-              ⚠️ <strong>Importante:</strong> Después de cambiar tu correo, recibirás un email de verificación en tu nueva dirección. Debes verificar el nuevo correo para completar el cambio.
-            </p>
-          </div>
+          <Alert
+            type="warning"
+            compact={true}
+            message="Después de cambiar tu correo, recibirás un email de verificación en tu nueva dirección. Debes verificar el nuevo correo para completar el cambio."
+          />
           <div className="flex gap-2 pt-2">
             <button
               type="button"

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { DollarSign, TrendingUp, ArrowUpRight, Target, Sparkles, Loader2 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import StatCard from '../components/StatCard'
+import Alert from '../components/Alert'
 import { ingresosService } from '../services/ingresosService'
 import { gastosService } from '../services/gastosService'
 import { ahorroService } from '../services/ahorroService'
@@ -131,9 +132,11 @@ const Dashboard = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
-          Error: {error}
-        </div>
+        <Alert
+          type="error"
+          title="Error"
+          message={error}
+        />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">

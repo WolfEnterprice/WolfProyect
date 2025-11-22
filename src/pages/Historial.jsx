@@ -3,6 +3,7 @@ import { Calendar, TrendingUp, TrendingDown, DollarSign, Loader2, ChevronRight }
 import { ingresosService } from '../services/ingresosService'
 import { gastosService } from '../services/gastosService'
 import { useFormatCurrency } from '../hooks/useFormatCurrency'
+import Alert from '../components/Alert'
 
 const Historial = () => {
   const { formatCurrency } = useFormatCurrency()
@@ -117,9 +118,11 @@ const Historial = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
-          Error: {error}
-        </div>
+        <Alert
+          type="error"
+          title="Error"
+          message={error}
+        />
       )}
 
       {mesesAnteriores.length === 0 ? (

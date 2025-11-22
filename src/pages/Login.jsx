@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { LogIn, Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react'
+import Alert from '../components/Alert'
 
 const Login = () => {
   const [email, setEmail] = useState('')
@@ -49,9 +50,11 @@ const Login = () => {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
-              {error}
-            </div>
+            <Alert
+              type="error"
+              title="Error de inicio de sesión"
+              message={error}
+            />
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">

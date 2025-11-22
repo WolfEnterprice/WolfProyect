@@ -34,6 +34,30 @@ npm run dev
 
 ## ⚠️ Solución de Problemas
 
+### Error: "API key not valid. Please pass a valid API key"
+
+**Este error significa que tu API key no es válida.** Sigue estos pasos:
+
+1. **Obtén una nueva API key:**
+   - Ve a [Google AI Studio](https://aistudio.google.com/apikey)
+   - Si ya tienes una API key, puedes crear una nueva o verificar la existente
+   - Asegúrate de copiar la API key completa (debe empezar con `AIzaSy`)
+
+2. **Actualiza el archivo `.env`:**
+   - Abre el archivo `.env` en la raíz del proyecto
+   - Reemplaza el valor de `VITE_GEMINI_API_KEY` con tu nueva API key
+   - Asegúrate de que NO haya espacios antes o después del `=`
+   - El formato correcto es: `VITE_GEMINI_API_KEY=AIzaSy...` (sin comillas)
+
+3. **Reinicia el servidor:**
+   - Detén el servidor (Ctrl + C)
+   - Inicia de nuevo: `npm run dev`
+
+4. **Verifica:**
+   - Abre la consola del navegador (F12)
+   - Busca mensajes de error o éxito
+   - Si el error persiste, verifica que la API key esté activa en Google AI Studio
+
 ### Error: "El modelo de IA no está disponible con tu API key"
 
 **Posibles causas:**
@@ -51,9 +75,11 @@ npm run dev
 ### Modelos disponibles
 
 El sistema intentará usar estos modelos en orden:
-1. `gemini-1.5-flash` (recomendado - más rápido)
-2. `gemini-1.5-pro` (más potente)
-3. `gemini-pro` (modelo clásico)
+1. `gemini-2.0-flash-exp` (Gemini 2.5 Flash - modelo más reciente y recomendado)
+2. `gemini-2.0-flash` (Gemini 2.0 Flash)
+3. `gemini-1.5-flash` (fallback - modelo anterior)
+4. `gemini-1.5-pro` (fallback - más potente)
+5. `gemini-pro` (fallback - modelo clásico)
 
 ## 📝 Notas Importantes
 

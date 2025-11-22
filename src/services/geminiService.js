@@ -12,7 +12,7 @@ if (!GEMINI_API_KEY || GEMINI_API_KEY === 'tu_api_key_aqui' || GEMINI_API_KEY ==
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null
 
 // Función para obtener el modelo (sin prueba previa, más eficiente)
-const getModel = (modeloNombre = 'gemini-1.5-flash') => {
+const getModel = (modeloNombre = 'gemini-2.0-flash-exp') => {
   if (!genAI) {
     throw new Error('API Key de Gemini no configurada. Agrega VITE_GEMINI_API_KEY en tu archivo .env')
   }
@@ -63,16 +63,30 @@ export const getUsuarioContexto = async (ingresos, gastos, presupuestos, ahorro)
 }
 
 /**
- * Generar prompt con contexto del usuario
+ * Generar prompt con contexto del usuario y historial de conversación
  */
-const generarPromptConContexto = (contexto, mensajeUsuario) => {
+const generarPromptConContexto = (contexto, mensajeUsuario, historialConversacion = []) => {
   const fechaActual = new Date().toLocaleDateString('es-CO', { 
     year: 'numeric', 
     month: 'long', 
     day: 'numeric' 
   })
 
-  return `Eres un asistente financiero experto y amigable llamado "FinBot". Tu objetivo es ayudar a las personas a mejorar su educación financiera y tomar mejores decisiones económicas.
+  // Construir historial de conversación
+  let historialTexto = ''
+  if (historialConversacion.length > 0) {
+    historialTexto = '\n\n📝 HISTORIAL DE CONVERSACIÓN (YA HAY UNA CONVERSACIÓN EN CURSO - NO SALUDES):\n'
+    historialConversacion.forEach((msg, index) => {
+      if (index < historialConversacion.length - 1) { // No incluir el último mensaje (el actual)
+        historialTexto += `${msg.tipo === 'usuario' ? 'Usuario' : 'FinBot'}: ${msg.texto}\n`
+      }
+    })
+    historialTexto += '\n⚠️ IMPORTANTE: Como ya hay historial de conversación, NO saludes ni te presentes. Responde directamente a la pregunta del usuario.'
+  } else {
+    historialTexto = '\n\n💬 NOTA: Este es el PRIMER mensaje de la conversación. Puedes saludar y presentarte brevemente.'
+  }
+
+  return `Eres FinBot, un asistente financiero experto, amigable y conversacional. Tu objetivo es ayudar a las personas a mejorar su educación financiera y tomar mejores decisiones económicas mediante conversaciones naturales y útiles.
 
 CONTEXTO FINANCIERO ACTUAL DEL USUARIO (${fechaActual}):
 
@@ -98,27 +112,36 @@ ${contexto.presupuestos.map(p =>
 - Meta: COP $${contexto.ahorro.meta.toLocaleString('es-CO')}
 - Ahorrado: COP $${contexto.ahorro.actual.toLocaleString('es-CO')}
 - Progreso: ${contexto.ahorro.porcentaje.toFixed(1)}%
+${historialTexto}
+INSTRUCCIONES PARA LA CONVERSACIÓN:
+1. Mantén una conversación natural y fluida, como si fueras un amigo experto en finanzas
+2. Responde de forma conversacional y amigable, NO como un informe técnico o robot
+3. IMPORTANTE: NO saludes en cada mensaje. Solo saluda si es el primer mensaje de la conversación. Si ya hay historial de conversación, responde directamente sin saludar.
+4. Haz preguntas de seguimiento cuando sea apropiado para entender mejor las necesidades del usuario
+5. Usa el historial de conversación para mantener el contexto y no repetir información ya mencionada
+6. Sé proactivo: sugiere temas relacionados o preguntas que el usuario podría tener
+7. Analiza los datos financieros de forma amigable y motivadora
+8. Identifica áreas de mejora específicas y sugiere acciones concretas y realizables
+9. Educa sobre conceptos financieros de forma simple y práctica, con ejemplos cuando sea útil
+10. Sé positivo y motivador, especialmente si hay problemas financieros
+11. Usa emojis de forma moderada (2-3 máximo por respuesta) para hacer la conversación más amigable
+12. Responde en español colombiano, de forma natural y coloquial
+13. Sé conciso pero completo (2-4 párrafos máximo, o más si el usuario pregunta algo complejo)
+14. Si el usuario hace una pregunta específica, responde directamente y luego ofrece información adicional relevante
+15. Puedes hacer preguntas para entender mejor qué necesita el usuario
+16. Mantén el tono conversacional: usa frases como "Te cuento que...", "Mira, lo que pasa es...", "Te recomiendo que..."
+17. Si el usuario menciona algo del historial, haz referencia a eso para mostrar que recuerdas la conversación
+18. NO repitas saludos, despedidas o presentaciones. Ve directo al punto de la pregunta del usuario.
 
-INSTRUCCIONES:
-1. Analiza los datos financieros del usuario de forma amigable y motivadora
-2. Identifica áreas de mejora específicas
-3. Proporciona tips y consejos prácticos personalizados
-4. Sugiere acciones concretas basadas en su situación actual
-5. Educa sobre conceptos financieros de forma simple
-6. Sé positivo y motivador, especialmente si hay deudas o gastos altos
-7. Usa emojis para hacer la conversación más amigable
-8. Responde en español colombiano
-9. Sé breve y conciso (máximo 3-4 párrafos)
+MENSAJE ACTUAL DEL USUARIO: "${mensajeUsuario}"
 
-MENSAJE DEL USUARIO: "${mensajeUsuario}"
-
-Responde de forma amigable, útil y personalizada:`
+Responde de forma conversacional, amigable, útil y personalizada. Mantén el contexto de la conversación anterior si existe. Sé natural y habla como un amigo que sabe de finanzas. Si ya hay historial de conversación, NO saludes, responde directamente:`
 }
 
 /**
- * Enviar mensaje a Gemini con contexto del usuario
+ * Enviar mensaje a Gemini con contexto del usuario e historial de conversación
  */
-export const enviarMensajeIA = async (mensajeUsuario, contexto) => {
+export const enviarMensajeIA = async (mensajeUsuario, contexto, historialConversacion = []) => {
   try {
     // Verificar API key
     if (!GEMINI_API_KEY || GEMINI_API_KEY === 'TU_API_KEY_AQUI' || GEMINI_API_KEY === 'tu_api_key_aqui') {
@@ -129,14 +152,17 @@ export const enviarMensajeIA = async (mensajeUsuario, contexto) => {
       throw new Error('Error al inicializar Gemini. Verifica tu API key.')
     }
 
-    // Generar prompt con contexto
-    const prompt = generarPromptConContexto(contexto, mensajeUsuario)
+    // Generar prompt con contexto e historial de conversación
+    const prompt = generarPromptConContexto(contexto, mensajeUsuario, historialConversacion)
 
     // Intentar diferentes modelos en orden de preferencia
+    // Gemini 2.5 Flash (modelo más reciente y recomendado)
     const modelos = [
-      'gemini-1.5-flash',      // Más rápido y económico (recomendado)
-      'gemini-1.5-pro',        // Más potente
-      'gemini-pro',            // Modelo clásico
+      'gemini-2.0-flash-exp',  // Gemini 2.5 Flash experimental
+      'gemini-2.0-flash',      // Gemini 2.0 Flash
+      'gemini-1.5-flash',      // Fallback: modelo anterior
+      'gemini-1.5-pro',        // Fallback: modelo potente
+      'gemini-pro',            // Fallback: modelo clásico
     ]
     
     let ultimoError = null
@@ -149,10 +175,10 @@ export const enviarMensajeIA = async (mensajeUsuario, contexto) => {
         
         const result = await model.generateContent(prompt, {
           generationConfig: {
-            temperature: 0.7,
+            temperature: 0.8, // Aumentado para respuestas más naturales y conversacionales
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 1500, // Aumentado para respuestas más completas
           }
         })
         
@@ -185,6 +211,9 @@ export const enviarMensajeIA = async (mensajeUsuario, contexto) => {
     if (!GEMINI_API_KEY || GEMINI_API_KEY === 'TU_API_KEY_AQUI' || GEMINI_API_KEY === 'tu_api_key_aqui') {
       mensajeError = 'API Key de Gemini no configurada.'
       instrucciones = 'Crea un archivo .env en la raíz del proyecto y agrega: VITE_GEMINI_API_KEY=tu_api_key_aqui'
+    } else if (error.message.includes('API_KEY_INVALID') || error.message.includes('API key not valid') || error.message.includes('not valid')) {
+      mensajeError = 'API Key de Gemini no válida o inválida.'
+      instrucciones = 'Tu API key no es válida. Obtén una nueva API key en https://aistudio.google.com/apikey y actualiza el archivo .env. Luego reinicia el servidor.'
     } else if (error.message.includes('API Key') || error.message.includes('VITE_GEMINI_API_KEY')) {
       mensajeError = 'API Key de Gemini no válida.'
       instrucciones = 'Verifica que tu API key sea correcta en el archivo .env y reinicia el servidor de desarrollo.'

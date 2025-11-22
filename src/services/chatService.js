@@ -17,11 +17,14 @@ export const chatService = {
     
     if (error) {
       console.error('Error obteniendo mensajes del chat:', error)
-      // Si la tabla no existe, retornar array vacío
-      if (error.code === 'PGRST116' || error.message.includes('does not exist')) {
+      // Si la tabla no existe, retornar array vacío (no es crítico)
+      if (error.code === 'PGRST116' || error.code === 'PGRST205' || error.message.includes('does not exist') || error.message.includes('Could not find the table')) {
+        console.warn('Tabla chat_mensajes no existe aún. El historial del chat no se guardará hasta que crees la tabla.')
         return []
       }
-      throw error
+      // Para otros errores, también retornar array vacío para no romper la UI
+      console.warn('Error obteniendo mensajes, continuando sin historial:', error.message)
+      return []
     }
     
     // Retornar array vacío si no hay datos
@@ -49,11 +52,13 @@ export const chatService = {
     if (error) {
       console.error('Error guardando mensaje del chat:', error)
       // Si la tabla no existe, no lanzar error (solo log)
-      if (error.code === 'PGRST116' || error.message.includes('does not exist')) {
-        console.warn('Tabla chat_mensajes no existe. Los mensajes no se guardarán.')
+      if (error.code === 'PGRST116' || error.code === 'PGRST205' || error.message.includes('does not exist') || error.message.includes('Could not find the table')) {
+        console.warn('Tabla chat_mensajes no existe. Los mensajes no se guardarán hasta que crees la tabla.')
         return null
       }
-      throw error
+      // Para otros errores, no romper la UI
+      console.warn('Error guardando mensaje, continuando sin guardar:', error.message)
+      return null
     }
     
     return data
@@ -75,11 +80,12 @@ export const chatService = {
     if (error) {
       console.error('Error eliminando mensajes del chat:', error)
       // Si la tabla no existe, no lanzar error
-      if (error.code === 'PGRST116' || error.message.includes('does not exist')) {
+      if (error.code === 'PGRST116' || error.code === 'PGRST205' || error.message.includes('does not exist') || error.message.includes('Could not find the table')) {
         console.warn('Tabla chat_mensajes no existe.')
         return
       }
-      throw error
+      // Para otros errores, no romper la UI
+      console.warn('Error eliminando mensajes:', error.message)
     }
   }
 }

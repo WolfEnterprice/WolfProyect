@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Send, Bot, DollarSign, Loader2, Sparkles, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { ingresosService } from '../services/ingresosService'
@@ -6,7 +7,6 @@ import { gastosService } from '../services/gastosService'
 import { presupuestosService } from '../services/presupuestosService'
 import { ahorroService } from '../services/ahorroService'
 import { getUsuarioContexto, enviarMensajeIA, generarTipsAutomaticos } from '../services/geminiService'
-import { chatService } from '../services/chatService'
 import DeleteModal from './DeleteModal'
 
 const AsistenteIA = ({ isOpen, onClose }) => {
@@ -20,13 +20,8 @@ const AsistenteIA = ({ isOpen, onClose }) => {
   const { user } = useAuth()
 
   useEffect(() => {
-    if (isOpen) {
-      if (!contexto) {
-        cargarContexto()
-      } else {
-        // Si ya hay contexto, solo cargar el historial guardado
-        cargarHistorial()
-      }
+    if (isOpen && !contexto) {
+      cargarContexto()
     }
   }, [isOpen])
 
@@ -38,93 +33,85 @@ const AsistenteIA = ({ isOpen, onClose }) => {
     try {
       setCargandoContexto(true)
       
-      // Cargar historial guardado primero
-      await cargarHistorial()
-      
-      const [ingresos, gastos, presupuestosData, ahorro] = await Promise.all([
-        ingresosService.getAll(),
-        gastosService.getAll(),
-        presupuestosService.getAll(),
-        ahorroService.get()
-      ])
+      // Cargar datos financieros en paralelo
+      let ingresos = []
+      let gastos = []
+      let presupuestosData = []
+      let ahorro = { ahorroActual: 0, ahorroMeta: 2000 }
+
+      try {
+        [ingresos, gastos, presupuestosData, ahorro] = await Promise.all([
+          ingresosService.getAll().catch(() => []),
+          gastosService.getAll().catch(() => []),
+          presupuestosService.getAll().catch(() => []),
+          ahorroService.get().catch(() => ({ ahorroActual: 0, ahorroMeta: 2000 }))
+        ])
+      } catch (error) {
+        console.warn('Error cargando algunos datos financieros, usando valores por defecto:', error)
+      }
 
       // Calcular gastado para cada presupuesto
-      const presupuestos = await Promise.all(
-        presupuestosData.map(async (presupuesto) => {
-          const gastado = await presupuestosService.getGastadoPorCategoria(presupuesto.categoria)
-          return { ...presupuesto, gastado }
+      let presupuestos = []
+      try {
+        presupuestos = await Promise.all(
+          presupuestosData.map(async (presupuesto) => {
+            try {
+              const gastado = await presupuestosService.getGastadoPorCategoria(presupuesto.categoria)
+              return { ...presupuesto, gastado }
+            } catch (error) {
+              console.warn(`Error calculando gastado para ${presupuesto.categoria}:`, error)
+              return { ...presupuesto, gastado: 0 }
+            }
+          })
+        )
+      } catch (error) {
+        console.warn('Error calculando presupuestos, usando valores por defecto:', error)
+        presupuestos = presupuestosData.map(p => ({ ...p, gastado: 0 }))
+      }
+
+      try {
+        const contextoUsuario = await getUsuarioContexto(ingresos, gastos, presupuestos, ahorro)
+        setContexto(contextoUsuario)
+      } catch (error) {
+        console.warn('Error generando contexto, usando contexto básico:', error)
+        // Crear contexto básico en caso de error
+        setContexto({
+          totalIngresos: 0,
+          totalGastos: 0,
+          balance: 0,
+          gastosPorCategoria: {},
+          presupuestos: [],
+          ahorro: { actual: 0, meta: 2000, porcentaje: 0 },
+          cantidadIngresos: 0,
+          cantidadGastos: 0
         })
-      )
+      }
 
-      const contextoUsuario = await getUsuarioContexto(ingresos, gastos, presupuestos, ahorro)
-      setContexto(contextoUsuario)
-
-      // Solo agregar mensaje de bienvenida si no hay historial guardado
-      const mensajesGuardados = await chatService.getAll()
-      const tieneHistorial = mensajesGuardados && mensajesGuardados.length > 0
-      
-      if (mostrarBienvenida && !tieneHistorial) {
-        await agregarMensaje({
+      // Agregar mensaje de bienvenida si se solicita
+      if (mostrarBienvenida) {
+        agregarMensaje({
           tipo: 'bot',
           texto: '¡Hola! 👋 Soy FinBot, tu asistente financiero personal. Estoy aquí para ayudarte con cualquier pregunta sobre tus finanzas.\n\nPuedes preguntarme sobre:\n• Cómo mejorar tus ahorros\n• Análisis de tus gastos\n• Consejos para cumplir tus presupuestos\n• Estrategias financieras\n• Y mucho más...\n\n¿En qué te gustaría que te ayude hoy?',
           timestamp: new Date()
         })
       }
     } catch (error) {
-      console.error('Error cargando contexto:', error)
-      let mensajeError = 'Lo siento, hubo un error al cargar tu información financiera. Por favor intenta de nuevo.'
-      
-      if (error.message && error.message.includes('API Key')) {
-        mensajeError = '⚠️ API Key de Gemini no configurada.\n\nPara configurarla:\n1. Crea un archivo .env en la raíz del proyecto\n2. Agrega: VITE_GEMINI_API_KEY=tu_api_key_aqui\n3. Obtén tu API key en: https://aistudio.google.com/apikey\n4. Reinicia el servidor de desarrollo\n\nMientras tanto, puedes usar la aplicación normalmente, pero el asistente IA no estará disponible.'
+      console.error('Error crítico cargando contexto:', error)
+      // Incluso si hay error, intentar mostrar mensaje de bienvenida
+      if (mostrarBienvenida) {
+        agregarMensaje({
+          tipo: 'bot',
+          texto: '⚠️ Hubo un problema cargando tu información financiera, pero puedo ayudarte igualmente. ¿En qué te gustaría que te ayude?',
+          timestamp: new Date()
+        })
       }
-      
-      await agregarMensaje({
-        tipo: 'bot',
-        texto: mensajeError,
-        timestamp: new Date()
-      })
     } finally {
       setCargandoContexto(false)
     }
   }
 
-  const agregarMensaje = async (mensaje) => {
+  const agregarMensaje = (mensaje) => {
     setMensajes(prev => [...prev, mensaje])
-    
-    // Guardar mensaje en la base de datos (solo si hay usuario autenticado)
-    if (user) {
-      try {
-        await chatService.create({
-          tipo: mensaje.tipo,
-          texto: mensaje.texto
-        })
-      } catch (error) {
-        // Si falla, solo loguear el error pero no interrumpir la UI
-        console.warn('No se pudo guardar el mensaje en la BD:', error)
-      }
-    }
-  }
-
-  const cargarHistorial = async () => {
-    if (!user) return
-    
-    try {
-      const mensajesGuardados = await chatService.getAll()
-      
-      if (mensajesGuardados && mensajesGuardados.length > 0) {
-        // Convertir mensajes de la BD al formato del componente
-        const mensajesFormateados = mensajesGuardados.map(msg => ({
-          tipo: msg.tipo,
-          texto: msg.texto,
-          timestamp: new Date(msg.created_at)
-        }))
-        
-        setMensajes(mensajesFormateados)
-      }
-    } catch (error) {
-      console.warn('No se pudo cargar el historial del chat:', error)
-      // Si falla, continuar sin historial (chat nuevo)
-    }
   }
 
   const scrollToBottom = () => {
@@ -137,29 +124,34 @@ const AsistenteIA = ({ isOpen, onClose }) => {
     const mensajeUsuario = mensajeActual.trim()
     setMensajeActual('')
 
-    // Agregar mensaje del usuario
-    await agregarMensaje({
+    // Crear objeto del mensaje del usuario antes de agregarlo al estado
+    const mensajeUsuarioObj = {
       tipo: 'usuario',
       texto: mensajeUsuario,
       timestamp: new Date()
-    })
+    }
+
+    // Agregar mensaje del usuario al estado
+    agregarMensaje(mensajeUsuarioObj)
 
     setLoading(true)
 
     try {
-      // Pasar el historial de conversación (últimos 10 mensajes para mantener contexto)
-      const historialReciente = mensajes.slice(-10)
+      // Crear historial actualizado incluyendo el mensaje que acabamos de agregar
+      // Esto asegura que la IA tenga el contexto completo de la conversación
+      const historialActualizado = [...mensajes, mensajeUsuarioObj]
+      const historialReciente = historialActualizado.slice(-10)
       const respuesta = await enviarMensajeIA(mensajeUsuario, contexto, historialReciente)
       
       if (respuesta.success) {
-        await agregarMensaje({
+        agregarMensaje({
           tipo: 'bot',
           texto: respuesta.mensaje,
           timestamp: new Date()
         })
       } else {
         // Si hay un error, mostrar el mensaje de error con instrucciones
-        await agregarMensaje({
+        agregarMensaje({
           tipo: 'bot',
           texto: respuesta.mensaje,
           timestamp: new Date()
@@ -175,7 +167,7 @@ const AsistenteIA = ({ isOpen, onClose }) => {
         mensajeError = '⚠️ El modelo de IA no está disponible con tu API key.\n\nVerifica que:\n1. Tu API key sea válida\n2. Tengas acceso a Gemini API en Google AI Studio\n3. La API key tenga permisos para usar los modelos'
       }
       
-      await agregarMensaje({
+      agregarMensaje({
         tipo: 'bot',
         texto: mensajeError,
         timestamp: new Date()
@@ -197,69 +189,81 @@ const AsistenteIA = ({ isOpen, onClose }) => {
   }
 
   const confirmarBorrarChat = async () => {
-    try {
-      // Borrar mensajes de la base de datos
-      if (user) {
-        await chatService.deleteAll()
-      }
-    } catch (error) {
-      console.warn('No se pudo borrar el historial de la BD:', error)
-    }
+    // Cerrar el modal primero
+    setIsDeleteModalOpen(false)
     
-    // Limpiar mensajes del estado
+    // Limpiar mensajes del estado (solo en memoria)
     setMensajes([])
     setMensajeActual('')
     setLoading(false)
     
+    // Limpiar contexto para que se recargue
+    setContexto(null)
+    
     // Recargar contexto y mostrar nuevo mensaje de bienvenida
     await cargarContexto(true)
-    setIsDeleteModalOpen(false)
   }
 
-  if (!isOpen) return null
+  if (!isOpen && !isDeleteModalOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-end pointer-events-none lg:items-center lg:justify-center">
-      {/* Overlay */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
-        onClick={onClose}
-      />
+    <>
+      {/* Modal de confirmación para borrar chat - Renderizado usando Portal en el body */}
+      {isDeleteModalOpen && createPortal(
+        <DeleteModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={confirmarBorrarChat}
+          title="Borrar Conversación"
+          message="¿Estás seguro de que quieres borrar toda la conversación? Esto eliminará todos los mensajes y reiniciará el chat."
+          confirmButtonText="Borrar Todo"
+        />,
+        document.body
+      )}
 
-      {/* Chat Container */}
-      <div className="relative w-full h-full max-w-md max-h-[90vh] bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl flex flex-col pointer-events-auto lg:h-[80vh] lg:max-h-[600px] animate-in slide-in-from-bottom lg:slide-in-from-right duration-300">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-2xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <Bot size={20} />
-            </div>
-            <div>
-              <h3 className="font-bold text-sm">FinBot</h3>
-              <p className="text-xs text-white/80">Tu asistente financiero</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {mensajes.length > 0 && !cargandoContexto && (
-              <button
-                onClick={borrarChat}
-                className="p-2 hover:bg-white/20 rounded-full transition-colors"
-                title="Borrar conversación"
-              >
-                <Trash2 size={18} />
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-full transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
+      {/* Chat Container - Solo se muestra si isOpen es true */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-end pointer-events-none lg:items-center lg:justify-center">
+          {/* Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
+            onClick={onClose}
+          />
 
-        {/* Mensajes */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          {/* Chat Container */}
+          <div className="relative w-full h-full max-w-md max-h-[90vh] bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl flex flex-col pointer-events-auto lg:h-[80vh] lg:max-h-[600px] animate-in slide-in-from-bottom lg:slide-in-from-right duration-300">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <Bot size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">FinBot</h3>
+                  <p className="text-xs text-white/80">Tu asistente financiero</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {mensajes.length > 0 && !cargandoContexto && (
+                  <button
+                    onClick={borrarChat}
+                    className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                    title="Borrar conversación"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Mensajes */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
           {cargandoContexto ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="animate-spin text-purple-600" size={24} />
@@ -306,12 +310,12 @@ const AsistenteIA = ({ isOpen, onClose }) => {
                 <Loader2 className="animate-spin text-purple-600" size={16} />
               </div>
             </div>
-          )}
-          <div ref={mensajesEndRef} />
-        </div>
+            )}
+            <div ref={mensajesEndRef} />
+          </div>
 
-        {/* Input */}
-        <div className="p-4 bg-white border-t border-gray-200 rounded-b-2xl">
+          {/* Input */}
+          <div className="p-4 bg-white border-t border-gray-200 rounded-b-2xl">
           {/* Sugerencias de preguntas rápidas */}
           {mensajes.length > 0 && mensajes.length <= 2 && !loading && contexto && (
             <div className="mb-3 flex flex-wrap gap-2">
@@ -358,14 +362,16 @@ const AsistenteIA = ({ isOpen, onClose }) => {
               )}
             </button>
           </div>
-          {!contexto && (
-            <p className="text-xs text-gray-500 mt-2">
-              💡 Cargando tu información financiera...
-            </p>
-          )}
+            {!contexto && (
+              <p className="text-xs text-gray-500 mt-2">
+                💡 Cargando tu información financiera...
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   )
 }
 

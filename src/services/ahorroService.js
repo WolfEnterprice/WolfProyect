@@ -18,9 +18,9 @@ export const ahorroService = {
     
     if (error) {
       console.error('Error obteniendo ahorro:', error)
-      // Si es un error de RLS o similar, devolver valores por defecto
-      if (error.code === 'PGRST116' || error.message.includes('permission') || error.message.includes('406')) {
-        console.log('Usuario nuevo sin datos de ahorro, devolviendo valores por defecto')
+      // Si la tabla no existe o hay error de RLS, devolver valores por defecto
+      if (error.code === 'PGRST116' || error.code === 'PGRST205' || error.message.includes('permission') || error.message.includes('406') || error.message.includes('Could not find the table')) {
+        console.log('Tabla ahorro no existe o usuario nuevo, devolviendo valores por defecto')
         return {
           id: null,
           ahorroActual: 0,

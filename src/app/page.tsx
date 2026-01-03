@@ -10,16 +10,20 @@ import Card from '@/components/ui/Card';
 import { EstadisticasDashboard } from '@/types';
 import { getEstadisticasDashboard } from '@/services/dashboard';
 import { formatCurrency, formatDate } from '@/utils/format';
-import Badge from '@/components/ui/Badge';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function DashboardPage() {
+  const { user, loading: authLoading } = useAuth();
   const [estadisticas, setEstadisticas] = useState<EstadisticasDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
   useEffect(() => {
-    loadEstadisticas();
-  }, []);
+    // Solo cargar datos cuando el usuario esté autenticado
+    if (!authLoading && user) {
+      loadEstadisticas();
+    }
+  }, [authLoading, user]);
   
   async function loadEstadisticas() {
     try {
@@ -33,10 +37,12 @@ export default function DashboardPage() {
     }
   }
   
-  if (loading) {
+  // Mostrar loading mientras se verifica la autenticación o se cargan los datos
+  if (authLoading || loading) {
     return (
       <MainLayout>
         <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-4"></div>
           <p className="text-gray-500">Cargando estadísticas...</p>
         </div>
       </MainLayout>
@@ -165,4 +171,5 @@ export default function DashboardPage() {
     </MainLayout>
   );
 }
+
 

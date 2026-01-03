@@ -102,15 +102,16 @@ async function getUsuarioFromDb(userId: string): Promise<Usuario> {
   }
 
   // Type assertion para asegurar que data tiene los campos necesarios
+  // En Supabase, el id es UUID (string), no number
   const usuarioData = data as {
-    id: number;
+    id: string; // UUID en Supabase
     nombre: string;
     email: string;
     activo: boolean;
   };
 
   return {
-    id: usuarioData.id,
+    id: usuarioData.id, // Mantener como string (UUID)
     nombre: usuarioData.nombre,
     email: usuarioData.email,
     activo: usuarioData.activo,

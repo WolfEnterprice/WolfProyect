@@ -32,30 +32,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     // Verificar usuario actual
-    checkUser();
+    async function initialize() {
+      try {
+        const currentUser = await getCurrentUser();
+        if (mounted) {
+          setUser(currentUser);
+          setLoading(false);
+        }
+      } catch (error) {
+        // Si no hay usuario, está bien - el usuario no está autenticado
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
+      }
+    }
+
+    initialize();
 
     // Suscribirse a cambios de autenticación
     const { data: { subscription } } = onAuthStateChange((user) => {
-      setUser(user);
-      setLoading(false);
+      if (mounted) {
+        setUser(user);
+        setLoading(false);
+      }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
-
-  async function checkUser() {
-    try {
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const login = async (email: string, password: string) => {
     const userData = await loginService(email, password);

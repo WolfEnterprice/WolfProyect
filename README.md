@@ -8,6 +8,7 @@ Sistema web interno de gestión financiera empresarial para dos socios.
 - **TypeScript**
 - **Tailwind CSS**
 - **Recharts** (Gráficos)
+- **Supabase** (Base de datos y autenticación)
 
 ## Estructura del Proyecto
 
@@ -35,6 +36,12 @@ npm run dev
 
 Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
+## Construcción
+
+```bash
+npm run build
+```
+
 ## Estructura de Datos
 
 El sistema maneja las siguientes entidades:
@@ -45,13 +52,7 @@ El sistema maneja las siguientes entidades:
 - **Repartos de Proyecto**: Porcentajes de reparto por socio
 - **Pagos entre Socios**: Pagos realizados entre socios
 
-## API
+## Configuración
 
-Las URLs de la API están mockeadas en `src/services/`. Para conectar con el backend real, solo necesitas actualizar las URLs en estos archivos.
-
-## Próximos Pasos
-
-1. Conectar con backend real (actualizar URLs en services/)
-2. Implementar autenticación real
-3. Añadir validaciones adicionales
+Ver `SUPABASE_SETUP.md` para configurar la conexión con Supabase.
 

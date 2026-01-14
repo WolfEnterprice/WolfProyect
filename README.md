@@ -56,3 +56,4 @@ El sistema maneja las siguientes entidades:
 
 Ver `SUPABASE_SETUP.md` para configurar la conexión con Supabase.
 
+# WolfProyect

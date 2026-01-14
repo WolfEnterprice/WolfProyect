@@ -67,10 +67,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-teal-50 to-lime-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary-600 mb-2">Freegents Finance</h1>
+          <img src="/icons/icono.png" alt="Wolf" className="h-16 w-16 mx-auto mb-4" />
+          <h1 className="text-4xl font-bold text-black mb-2">Wolf</h1>
           <p className="text-gray-600">Sistema de gestión financiera</p>
         </div>
 

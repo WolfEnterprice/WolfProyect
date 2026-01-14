@@ -35,7 +35,7 @@ export default function GananciaPorProyectoChart({ data }: GananciaPorProyectoCh
         <XAxis dataKey="name" />
         <YAxis tickFormatter={(value) => formatCurrency(value)} />
         <Tooltip content={<CustomTooltip />} />
-        <Bar dataKey="value" fill="#10b981" name="Ganancia" />
+        <Bar dataKey="value" fill="#06b6d4" name="Ganancia" />
       </BarChart>
     </ResponsiveContainer>
   );

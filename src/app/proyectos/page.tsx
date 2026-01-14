@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import MainLayout from '@/components/layout/MainLayout';
 import Card from '@/components/ui/Card';
@@ -16,44 +16,28 @@ import TableCell from '@/components/tables/TableCell';
 import Badge from '@/components/ui/Badge';
 import ProyectoForm from '@/components/forms/ProyectoForm';
 import { Proyecto } from '@/types';
-import { getProyectos, createProyecto, updateProyecto } from '@/services/proyectos';
 import { formatDateShort } from '@/utils/format';
+import { useProyectos, useCreateProyecto, useUpdateProyecto } from '@/hooks/useProyectos';
 
 export default function ProyectosPage() {
-  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProyecto, setEditingProyecto] = useState<Proyecto | null>(null);
   
-  useEffect(() => {
-    loadProyectos();
-  }, []);
+  const { data: proyectos = [], isLoading: loading } = useProyectos();
+  const createMutation = useCreateProyecto();
+  const updateMutation = useUpdateProyecto();
   
-  async function loadProyectos() {
-    try {
-      setLoading(true);
-      const data = await getProyectos();
-      setProyectos(data);
-    } catch (err) {
-      console.error('Error loading proyectos:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-  async function handleCreateProyecto(data: Omit<Proyecto, 'id'>) {
-    await createProyecto(data);
+  const handleCreateProyecto = useCallback(async (data: Omit<Proyecto, 'id'>) => {
+    await createMutation.mutateAsync(data);
     setIsModalOpen(false);
-    loadProyectos();
-  }
+  }, [createMutation]);
   
-  async function handleUpdateProyecto(data: Omit<Proyecto, 'id'>) {
+  const handleUpdateProyecto = useCallback(async (data: Omit<Proyecto, 'id'>) => {
     if (!editingProyecto) return;
-    await updateProyecto(editingProyecto.id, data);
+    await updateMutation.mutateAsync({ id: editingProyecto.id, data });
     setIsModalOpen(false);
     setEditingProyecto(null);
-    loadProyectos();
-  }
+  }, [editingProyecto, updateMutation]);
   
   function handleEdit(proyecto: Proyecto) {
     setEditingProyecto(proyecto);

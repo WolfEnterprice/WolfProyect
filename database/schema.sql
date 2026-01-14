@@ -1,5 +1,5 @@
 -- ============================================================================
--- Freegents Finance - Script SQL de Base de Datos
+-- Wolf - Script SQL de Base de Datos
 -- ============================================================================
 -- Este script crea la estructura completa de la base de datos
 -- Compatible con PostgreSQL, MySQL/MariaDB (con ligeras modificaciones)

@@ -1,5 +1,5 @@
 {
-  "name": "freegents-finance",
+  "name": "wolf-finance",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,6 +12,7 @@
     "@google/genai": "^1.30.0",
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.39.0",
+    "@tanstack/react-query": "^5.90.17",
     "lucide-react": "^0.294.0",
     "next": "^14.0.4",
     "react": "^18.2.0",

@@ -4,41 +4,38 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import IngresosVsEgresosChart from '@/components/charts/IngresosVsEgresosChart';
-import GananciaPorProyectoChart from '@/components/charts/GananciaPorProyectoChart';
-import { DatosGrafico, FiltroFecha } from '@/types';
-import { getIngresosVsEgresos, getGananciaPorProyecto } from '@/services/reportes';
+import dynamic from 'next/dynamic';
+
+const IngresosVsEgresosChart = dynamic(
+  () => import('@/components/charts/IngresosVsEgresosChart'),
+  { 
+    loading: () => <div className="text-center py-12"><p className="text-gray-500">Cargando gráfico...</p></div>,
+    ssr: false 
+  }
+);
+
+const GananciaPorProyectoChart = dynamic(
+  () => import('@/components/charts/GananciaPorProyectoChart'),
+  { 
+    loading: () => <div className="text-center py-12"><p className="text-gray-500">Cargando gráfico...</p></div>,
+    ssr: false 
+  }
+);
+import { FiltroFecha } from '@/types';
+import { useIngresosVsEgresos, useGananciaPorProyecto } from '@/hooks/useReportes';
 
 export default function ReportesPage() {
   const [filtros, setFiltros] = useState<FiltroFecha>({});
-  const [ingresosVsEgresos, setIngresosVsEgresos] = useState<DatosGrafico[]>([]);
-  const [gananciaPorProyecto, setGananciaPorProyecto] = useState<DatosGrafico[]>([]);
-  const [loading, setLoading] = useState(true);
   
-  useEffect(() => {
-    loadReportes();
-  }, [filtros]);
+  const { data: ingresosVsEgresos = [], isLoading: loadingIngresos } = useIngresosVsEgresos(filtros);
+  const { data: gananciaPorProyecto = [], isLoading: loadingGanancia } = useGananciaPorProyecto(filtros);
   
-  async function loadReportes() {
-    try {
-      setLoading(true);
-      const [ingresosData, gananciaData] = await Promise.all([
-        getIngresosVsEgresos(filtros),
-        getGananciaPorProyecto(filtros),
-      ]);
-      setIngresosVsEgresos(ingresosData);
-      setGananciaPorProyecto(gananciaData);
-    } catch (err) {
-      console.error('Error loading reportes:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const loading = loadingIngresos || loadingGanancia;
   
   function handleLimpiarFiltros() {
     setFiltros({});

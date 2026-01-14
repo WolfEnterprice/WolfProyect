@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { DollarSign } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import AsistenteIA from './AsistenteIA'
+import dynamic from 'next/dynamic';
+
+const AsistenteIA = dynamic(() => import('./AsistenteIA'), {
+  ssr: false,
+  loading: () => null,
+});
 
 const BotonAsistenteIA = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -16,7 +21,7 @@ const BotonAsistenteIA = () => {
       {/* Botón Flotante */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-full shadow-2xl hover:shadow-purple-500/50 transform hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-primary-500 via-teal-500 to-lime-500 text-white rounded-full shadow-2xl hover:shadow-primary-500/50 transform hover:scale-110 transition-all duration-300 flex items-center justify-center group"
         title="Asistente Financiero IA - FinBot"
         aria-label="Abrir asistente financiero IA"
         style={{ 

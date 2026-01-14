@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import MainLayout from '@/components/layout/MainLayout';
 import Card from '@/components/ui/Card';
@@ -13,43 +13,19 @@ import Table from '@/components/tables/Table';
 import TableRow from '@/components/tables/TableRow';
 import TableCell from '@/components/tables/TableCell';
 import Badge from '@/components/ui/Badge';
-import { Proyecto, MovimientoDetallado, RepartoProyectoDetallado } from '@/types';
-import { getProyecto, getRepartosProyecto } from '@/services/proyectos';
-import { getMovimientos } from '@/services/movimientos';
 import { formatCurrency, formatDateShort } from '@/utils/format';
+import { useProyecto, useRepartosProyecto } from '@/hooks/useProyectos';
+import { useMovimientos } from '@/hooks/useMovimientos';
 
 export default function ProyectoDetailPage() {
   const params = useParams();
   const proyectoId = Number(params.id);
   
-  const [proyecto, setProyecto] = useState<Proyecto | null>(null);
-  const [movimientos, setMovimientos] = useState<MovimientoDetallado[]>([]);
-  const [repartos, setRepartos] = useState<RepartoProyectoDetallado[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: proyecto, isLoading: loadingProyecto } = useProyecto(proyectoId);
+  const { data: movimientos = [], isLoading: loadingMovimientos } = useMovimientos({ proyecto_id: proyectoId });
+  const { data: repartos = [], isLoading: loadingRepartos } = useRepartosProyecto(proyectoId);
   
-  useEffect(() => {
-    if (proyectoId) {
-      loadData();
-    }
-  }, [proyectoId]);
-  
-  async function loadData() {
-    try {
-      setLoading(true);
-      const [proyectoData, movimientosData, repartosData] = await Promise.all([
-        getProyecto(proyectoId),
-        getMovimientos({ proyecto_id: proyectoId }),
-        getRepartosProyecto(proyectoId),
-      ]);
-      setProyecto(proyectoData);
-      setMovimientos(movimientosData);
-      setRepartos(repartosData);
-    } catch (err) {
-      console.error('Error loading data:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const loading = loadingProyecto || loadingMovimientos || loadingRepartos;
   
   if (loading) {
     return (
@@ -71,16 +47,22 @@ export default function ProyectoDetailPage() {
     );
   }
   
-  // Calcular estadísticas del proyecto
-  const ingresos = movimientos
-    .filter(m => m.tipo === 'ingreso')
-    .reduce((sum, m) => sum + m.monto, 0);
-  
-  const egresos = movimientos
-    .filter(m => m.tipo === 'egreso')
-    .reduce((sum, m) => sum + m.monto, 0);
-  
-  const ganancia = ingresos - egresos;
+  // Calcular estadísticas del proyecto con useMemo para optimización
+  const { ingresos, egresos, ganancia } = useMemo(() => {
+    const ingresosTotal = movimientos
+      .filter(m => m.tipo === 'ingreso')
+      .reduce((sum, m) => sum + m.monto, 0);
+    
+    const egresosTotal = movimientos
+      .filter(m => m.tipo === 'egreso')
+      .reduce((sum, m) => sum + m.monto, 0);
+    
+    return {
+      ingresos: ingresosTotal,
+      egresos: egresosTotal,
+      ganancia: ingresosTotal - egresosTotal,
+    };
+  }, [movimientos]);
   
   function getEstadoBadgeVariant(estado: string) {
     switch (estado) {
@@ -132,7 +114,7 @@ export default function ProyectoDetailPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card>
           <p className="text-sm font-medium text-gray-500">Ingresos</p>
-          <p className="mt-2 text-2xl font-bold text-green-600">
+          <p className="mt-2 text-2xl font-bold text-teal-600">
             {formatCurrency(ingresos)}
           </p>
         </Card>
@@ -144,7 +126,7 @@ export default function ProyectoDetailPage() {
         </Card>
         <Card>
           <p className="text-sm font-medium text-gray-500">Ganancia</p>
-          <p className={`mt-2 text-2xl font-bold ${ganancia >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <p className={`mt-2 text-2xl font-bold ${ganancia >= 0 ? 'text-teal-600' : 'text-red-600'}`}>
             {formatCurrency(ganancia)}
           </p>
         </Card>
@@ -186,7 +168,7 @@ export default function ProyectoDetailPage() {
                     {movimiento.tipo === 'ingreso' ? 'Ingreso' : 'Egreso'}
                   </Badge>
                 </TableCell>
-                <TableCell className={movimiento.tipo === 'ingreso' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                <TableCell className={movimiento.tipo === 'ingreso' ? 'text-teal-600 font-semibold' : 'text-red-600 font-semibold'}>
                   {movimiento.tipo === 'ingreso' ? '+' : '-'}
                   {formatCurrency(movimiento.monto)}
                 </TableCell>

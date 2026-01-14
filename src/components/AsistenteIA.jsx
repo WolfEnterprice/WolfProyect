@@ -226,14 +226,14 @@ const AsistenteIA = ({ isOpen, onClose }) => {
         <div className="fixed inset-0 z-50 flex items-end justify-end pointer-events-none lg:items-center lg:justify-center">
           {/* Overlay */}
           <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
+            className="absolute inset-0 bg-wolf-dark/50 backdrop-blur-sm pointer-events-auto"
             onClick={onClose}
           />
 
           {/* Chat Container */}
           <div className="relative w-full h-full max-w-md max-h-[90vh] bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl flex flex-col pointer-events-auto lg:h-[80vh] lg:max-h-[600px] animate-in slide-in-from-bottom lg:slide-in-from-right duration-300">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-2xl">
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary-500 via-teal-500 to-lime-500 text-white rounded-t-2xl">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                   <Bot size={20} />
@@ -266,12 +266,12 @@ const AsistenteIA = ({ isOpen, onClose }) => {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
           {cargandoContexto ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="animate-spin text-purple-600" size={24} />
+              <Loader2 className="animate-spin text-primary-600" size={24} />
               <span className="ml-2 text-sm text-gray-600">Cargando tu información...</span>
             </div>
           ) : mensajes.length === 0 ? (
             <div className="text-center py-8 text-gray-500 text-sm">
-              <Sparkles className="mx-auto mb-2 text-purple-500" size={32} />
+              <Sparkles className="mx-auto mb-2 text-primary-500" size={32} />
               <p>¡Hola! ¿En qué puedo ayudarte con tus finanzas?</p>
             </div>
           ) : (
@@ -283,14 +283,14 @@ const AsistenteIA = ({ isOpen, onClose }) => {
                 <div
                   className={`max-w-[80%] rounded-2xl p-3 ${
                     mensaje.tipo === 'usuario'
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white'
+                      ? 'bg-gradient-to-r from-primary-500 via-teal-500 to-lime-500 text-white'
                       : 'bg-white text-gray-800 shadow-md border border-gray-200'
                   }`}
                 >
                   {mensaje.tipo === 'bot' && (
                     <div className="flex items-center gap-2 mb-1">
-                      <Bot size={14} className="text-purple-500" />
-                      <span className="text-xs font-semibold text-purple-600">FinBot</span>
+                      <Bot size={14} className="text-primary-500" />
+                      <span className="text-xs font-semibold text-primary-600">FinBot</span>
                     </div>
                   )}
                   <p className="text-sm whitespace-pre-wrap">{mensaje.texto}</p>
@@ -307,7 +307,7 @@ const AsistenteIA = ({ isOpen, onClose }) => {
           {loading && (
             <div className="flex justify-start">
               <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-200">
-                <Loader2 className="animate-spin text-purple-600" size={16} />
+                <Loader2 className="animate-spin text-primary-600" size={16} />
               </div>
             </div>
             )}
@@ -321,7 +321,7 @@ const AsistenteIA = ({ isOpen, onClose }) => {
             <div className="mb-3 flex flex-wrap gap-2">
               <button
                 onClick={() => setMensajeActual('¿Cómo puedo ahorrar más dinero?')}
-                className="px-3 py-1.5 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-full border border-purple-200 transition-colors"
+                className="px-3 py-1.5 text-xs bg-primary-50 hover:bg-primary-100 text-primary-700 rounded-full border border-primary-200 transition-colors"
               >
                 💰 ¿Cómo ahorrar más?
               </button>
@@ -347,13 +347,13 @@ const AsistenteIA = ({ isOpen, onClose }) => {
               onKeyPress={handleKeyPress}
               placeholder="Escribe tu pregunta o mensaje..."
               disabled={loading || cargandoContexto || !contexto}
-              className="flex-1 min-h-[40px] max-h-24 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="flex-1 min-h-[40px] max-h-24 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
               rows={1}
             />
             <button
               onClick={enviarMensaje}
               disabled={!mensajeActual.trim() || loading || cargandoContexto || !contexto}
-              className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="p-2 bg-gradient-to-r from-primary-500 via-teal-500 to-lime-500 text-white rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? (
                 <Loader2 className="animate-spin" size={20} />

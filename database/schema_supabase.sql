@@ -1,5 +1,5 @@
 -- ============================================================================
--- Freegents Finance - Script SQL para Supabase (PostgreSQL)
+-- Wolf - Script SQL para Supabase (PostgreSQL)
 -- ============================================================================
 -- Copia y pega este script completo en el editor SQL de Supabase
 -- ============================================================================

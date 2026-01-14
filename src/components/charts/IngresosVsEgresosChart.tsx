@@ -38,7 +38,7 @@ export default function IngresosVsEgresosChart({ data }: IngresosVsEgresosChartP
         <YAxis tickFormatter={(value) => formatCurrency(value)} />
         <Tooltip content={<CustomTooltip />} />
         <Legend />
-        <Bar dataKey="ingresos" fill="#0ea5e9" name="Ingresos" />
+        <Bar dataKey="ingresos" fill="#14b8a6" name="Ingresos" />
         <Bar dataKey="egresos" fill="#ef4444" name="Egresos" />
       </BarChart>
     </ResponsiveContainer>

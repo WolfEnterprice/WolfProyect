@@ -1,12 +1,12 @@
 -- ============================================================================
--- Freegents Finance - Script SQL de Base de Datos (MySQL/MariaDB)
+-- Wolf - Script SQL de Base de Datos (MySQL/MariaDB)
 -- ============================================================================
 -- Este script crea la estructura completa de la base de datos para MySQL/MariaDB
 -- ============================================================================
 
 -- Crear base de datos (descomentar si necesitas crearla)
--- CREATE DATABASE IF NOT EXISTS freegents_finance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
--- USE freegents_finance;
+-- CREATE DATABASE IF NOT EXISTS wolf_finance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE wolf_finance;
 
 -- ============================================================================
 -- TABLA: usuarios

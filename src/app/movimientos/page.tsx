@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -17,61 +17,47 @@ import TableCell from '@/components/tables/TableCell';
 import Badge from '@/components/ui/Badge';
 import MovimientoForm from '@/components/forms/MovimientoForm';
 import { MovimientoDetallado, FiltroMovimientos } from '@/types';
-import { getMovimientos, createMovimiento, updateMovimiento, deleteMovimiento } from '@/services/movimientos';
-import { getProyectos } from '@/services/proyectos';
 import { formatCurrency, formatDateShort } from '@/utils/format';
-import { Proyecto } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMovimientos, useCreateMovimiento, useUpdateMovimiento, useDeleteMovimiento } from '@/hooks/useMovimientos';
+import { useProyectos } from '@/hooks/useProyectos';
 
 export default function MovimientosPage() {
   const { user } = useAuth();
-  const [movimientos, setMovimientos] = useState<MovimientoDetallado[]>([]);
-  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMovimiento, setEditingMovimiento] = useState<MovimientoDetallado | null>(null);
   const [filtros, setFiltros] = useState<FiltroMovimientos>({});
   
-  useEffect(() => {
-    loadData();
-  }, [filtros]);
+  const { data: movimientos = [], isLoading: loadingMovimientos } = useMovimientos(filtros);
+  const { data: proyectos = [], isLoading: loadingProyectos } = useProyectos();
+  const createMutation = useCreateMovimiento();
+  const updateMutation = useUpdateMovimiento();
+  const deleteMutation = useDeleteMovimiento();
   
-  async function loadData() {
-    try {
-      setLoading(true);
-      const [movimientosData, proyectosData] = await Promise.all([
-        getMovimientos(filtros),
-        getProyectos(),
-      ]);
-      setMovimientos(movimientosData);
-      setProyectos(proyectosData);
-    } catch (err) {
-      console.error('Error loading data:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const loading = loadingMovimientos || loadingProyectos;
   
-  async function handleCreateMovimiento(data: Omit<MovimientoDetallado, 'id'>) {
-    await createMovimiento(data);
+  const handleCreateMovimiento = useCallback(async (data: Omit<MovimientoDetallado, 'id'>) => {
+    await createMutation.mutateAsync(data);
     setIsModalOpen(false);
-    loadData();
-  }
+  }, [createMutation]);
   
-  async function handleUpdateMovimiento(data: Omit<MovimientoDetallado, 'id'>) {
+  const handleUpdateMovimiento = useCallback(async (data: Omit<MovimientoDetallado, 'id'>) => {
     if (!editingMovimiento) return;
-    await updateMovimiento(editingMovimiento.id, data);
+    await updateMutation.mutateAsync({ id: editingMovimiento.id, data });
     setIsModalOpen(false);
     setEditingMovimiento(null);
-    loadData();
-  }
+  }, [editingMovimiento, updateMutation]);
   
-  async function handleDelete(id: number) {
+  const handleDelete = useCallback(async (id: number) => {
     if (confirm('¿Estás seguro de eliminar este movimiento?')) {
-      await deleteMovimiento(id);
-      loadData();
+      await deleteMutation.mutateAsync(id);
     }
-  }
+  }, [deleteMutation]);
+  
+  // Para filtros de fecha, usar debounce; para selects, actualizar inmediatamente
+  const handleFiltroChange = useCallback((updates: Partial<FiltroMovimientos>) => {
+    setFiltros(prev => ({ ...prev, ...updates }));
+  }, []);
   
   function handleEdit(movimiento: MovimientoDetallado) {
     setEditingMovimiento(movimiento);
@@ -83,10 +69,10 @@ export default function MovimientosPage() {
     setIsModalOpen(true);
   }
   
-  const proyectoOptions = [
+  const proyectoOptions = useMemo(() => [
     { value: '', label: 'Todos los proyectos' },
     ...proyectos.map(p => ({ value: p.id.toString(), label: p.nombre })),
-  ];
+  ], [proyectos]);
   
   const headers = ['Fecha', 'Tipo', 'Monto', 'Categoría', 'Proyecto', 'Descripción', 'Estado', 'Creado por', 'Acciones'];
   
@@ -107,18 +93,18 @@ export default function MovimientosPage() {
             label="Fecha desde"
             type="date"
             value={filtros.fechaDesde || ''}
-            onChange={(e) => setFiltros(prev => ({ ...prev, fechaDesde: e.target.value || undefined }))}
+            onChange={(e) => handleFiltroChange({ fechaDesde: e.target.value || undefined })}
           />
           <Input
             label="Fecha hasta"
             type="date"
             value={filtros.fechaHasta || ''}
-            onChange={(e) => setFiltros(prev => ({ ...prev, fechaHasta: e.target.value || undefined }))}
+            onChange={(e) => handleFiltroChange({ fechaHasta: e.target.value || undefined })}
           />
           <Select
             label="Tipo"
             value={filtros.tipo || ''}
-            onChange={(e) => setFiltros(prev => ({ ...prev, tipo: e.target.value as 'ingreso' | 'egreso' || undefined }))}
+            onChange={(e) => handleFiltroChange({ tipo: e.target.value as 'ingreso' | 'egreso' || undefined })}
             options={[
               { value: '', label: 'Todos' },
               { value: 'ingreso', label: 'Ingreso' },
@@ -128,13 +114,13 @@ export default function MovimientosPage() {
           <Select
             label="Proyecto"
             value={filtros.proyecto_id?.toString() || ''}
-            onChange={(e) => setFiltros(prev => ({ ...prev, proyecto_id: e.target.value ? Number(e.target.value) : undefined }))}
+            onChange={(e) => handleFiltroChange({ proyecto_id: e.target.value ? Number(e.target.value) : undefined })}
             options={proyectoOptions}
           />
           <Select
             label="Estado"
             value={filtros.estado || ''}
-            onChange={(e) => setFiltros(prev => ({ ...prev, estado: e.target.value as 'pendiente' | 'pagado' || undefined }))}
+            onChange={(e) => handleFiltroChange({ estado: e.target.value as 'pendiente' | 'pagado' || undefined })}
             options={[
               { value: '', label: 'Todos' },
               { value: 'pendiente', label: 'Pendiente' },
@@ -173,7 +159,7 @@ export default function MovimientosPage() {
                     {movimiento.tipo === 'ingreso' ? 'Ingreso' : 'Egreso'}
                   </Badge>
                 </TableCell>
-                <TableCell className={movimiento.tipo === 'ingreso' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                <TableCell className={movimiento.tipo === 'ingreso' ? 'text-teal-600 font-semibold' : 'text-red-600 font-semibold'}>
                   {movimiento.tipo === 'ingreso' ? '+' : '-'}
                   {formatCurrency(movimiento.monto)}
                 </TableCell>

@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -15,43 +15,32 @@ import TableCell from '@/components/tables/TableCell';
 import Badge from '@/components/ui/Badge';
 import PagoForm from '@/components/forms/PagoForm';
 import { PagoSocioDetallado } from '@/types';
-import { getPagos, getPagosPendientes, createPago, marcarPagoComoPagado } from '@/services/pagos';
 import { formatCurrency, formatDateShort } from '@/utils/format';
+import { usePagos, useCreatePago, useMarcarPagoComoPagado } from '@/hooks/usePagos';
 
 export default function PagosPage() {
-  const [pagos, setPagos] = useState<PagoSocioDetallado[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mostrarSoloPendientes, setMostrarSoloPendientes] = useState(false);
   
-  useEffect(() => {
-    loadPagos();
-  }, [mostrarSoloPendientes]);
+  const { data: pagos = [], isLoading: loading } = usePagos(mostrarSoloPendientes);
+  const createMutation = useCreatePago();
+  const marcarPagadoMutation = useMarcarPagoComoPagado();
   
-  async function loadPagos() {
-    try {
-      setLoading(true);
-      const data = mostrarSoloPendientes ? await getPagosPendientes() : await getPagos();
-      setPagos(data);
-    } catch (err) {
-      console.error('Error loading pagos:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-  
-  async function handleCreatePago(data: Omit<PagoSocioDetallado, 'id'>) {
-    await createPago(data);
+  const handleCreatePago = useCallback(async (data: Omit<PagoSocioDetallado, 'id'>) => {
+    await createMutation.mutateAsync(data);
     setIsModalOpen(false);
-    loadPagos();
-  }
+  }, [createMutation]);
   
-  async function handleMarcarComoPagado(id: number) {
+  const handleMarcarComoPagado = useCallback(async (id: number) => {
     if (confirm('¿Marcar este pago como pagado?')) {
-      await marcarPagoComoPagado(id);
-      loadPagos();
+      await marcarPagadoMutation.mutateAsync(id);
     }
-  }
+  }, [marcarPagadoMutation]);
+  
+  const pagosPendientesCount = useMemo(
+    () => pagos.filter(p => p.estado === 'pendiente').length,
+    [pagos]
+  );
   
   function handleNew() {
     setIsModalOpen(true);
@@ -83,12 +72,12 @@ export default function PagosPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Pagos Pendientes</p>
-              <p className="mt-2 text-2xl font-bold text-orange-600">
-                {pagos.filter(p => p.estado === 'pendiente').length}
+              <p className="mt-2 text-2xl font-bold text-lime-600">
+                {pagosPendientesCount}
               </p>
             </div>
-            <div className="p-3 bg-orange-100 rounded-full">
-              <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-3 bg-lime-100 rounded-full">
+              <svg className="w-6 h-6 text-lime-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -145,6 +134,7 @@ export default function PagosPage() {
                       variant="primary"
                       size="sm"
                       onClick={() => handleMarcarComoPagado(pago.id)}
+                      disabled={marcarPagadoMutation.isPending}
                     >
                       Marcar como Pagado
                     </Button>

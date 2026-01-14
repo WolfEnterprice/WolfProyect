@@ -1,4 +1,4 @@
-# Base de Datos - Freegents Finance
+# Base de Datos - Wolf
 
 Este directorio contiene los scripts SQL para crear la base de datos del sistema.
 
@@ -69,10 +69,10 @@ Pagos realizados entre socios por proyecto.
 psql -U postgres
 
 # Crear base de datos
-CREATE DATABASE freegents_finance;
+CREATE DATABASE wolf_finance;
 
 # Conectarse a la base de datos
-\c freegents_finance
+\c wolf_finance
 
 # Ejecutar script
 \i database/schema.sql
@@ -85,10 +85,10 @@ CREATE DATABASE freegents_finance;
 mysql -u root -p
 
 # Crear base de datos
-CREATE DATABASE freegents_finance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE wolf_finance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 # Usar la base de datos
-USE freegents_finance;
+USE wolf_finance;
 
 # Ejecutar script
 SOURCE database/schema_mysql.sql;

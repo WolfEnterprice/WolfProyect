@@ -19,7 +19,7 @@ Esta guía te llevará paso a paso para configurar autenticación OAuth con Goog
 
 1. Si es la primera vez, configura la pantalla de consentimiento:
    - Tipo: **External** (para desarrollo)
-   - App name: "Freegents Finance"
+   - App name: "Wolf"
    - User support email: tu email
    - Developer contact: tu email
    - Haz clic en **Save and Continue**
@@ -34,7 +34,7 @@ Esta guía te llevará paso a paso para configurar autenticación OAuth con Goog
 
 1. Haz clic en **Create Credentials** > **OAuth client ID**
 2. Tipo de aplicación: **Web application**
-3. Nombre: "Freegents Finance Web"
+3. Nombre: "Wolf Web"
 4. **Authorized JavaScript origins**:
    ```
    https://jnykzalzjhupwoumhgus.supabase.co
@@ -66,7 +66,7 @@ Esta guía te llevará paso a paso para configurar autenticación OAuth con Goog
 2. Haz clic en **OAuth Apps** en el menú lateral
 3. Haz clic en **New OAuth App**
 4. Completa el formulario:
-   - **Application name**: `Freegents Finance`
+   - **Application name**: `Wolf`
    - **Homepage URL**: `http://localhost:3000` (o tu dominio de producción)
    - **Authorization callback URL**: 
      ```

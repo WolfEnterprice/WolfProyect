@@ -10,7 +10,7 @@
 4. Haz clic en **Create Credentials** > **OAuth client ID**
 5. Si es la primera vez, configura la pantalla de consentimiento OAuth:
    - Tipo de aplicación: **External**
-   - Nombre de la app: "Freegents Finance"
+   - Nombre de la app: "Wolf"
    - Email de soporte: tu email
    - Agrega tu dominio o deja el dominio de prueba
    - Guarda y continúa
@@ -20,7 +20,7 @@
 ### 1.2. Crear OAuth Client ID
 
 1. Tipo de aplicación: **Web application**
-2. Nombre: "Freegents Finance Web"
+2. Nombre: "Wolf Web"
 3. **Authorized JavaScript origins**:
    ```
    https://jnykzalzjhupwoumhgus.supabase.co
@@ -51,7 +51,7 @@
 1. Ve a [GitHub Developer Settings](https://github.com/settings/developers)
 2. Haz clic en **OAuth Apps** > **New OAuth App**
 3. Completa el formulario:
-   - **Application name**: "Freegents Finance"
+   - **Application name**: "Wolf"
    - **Homepage URL**: 
      ```
      http://localhost:3000 (desarrollo)
